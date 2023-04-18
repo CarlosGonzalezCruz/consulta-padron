@@ -22,11 +22,11 @@
   "dependencies": {
     "@popperjs/core": "^2.11.6",
     "express": "^4.18.2",
-    "formidable": "^2.1.1",
     "mysql": "^2.18.1",
     "oracledb": "file:./node-oracledb",
     "passport": "^0.6.0",
     "passport-ldapauth": "^3.0.1",
+    "passport-strategy": "^1.0.0",
     "properties-reader": "^2.2.0"
   },
   "devDependencies": {
@@ -37,6 +37,7 @@
     "@types/mysql": "^2.15.21",
     "@types/oracledb": "^5.2.4",
     "@types/passport": "^1.0.12",
+    "@types/passport-strategy": "^0.2.35",
     "@types/properties-reader": "^2.1.1",
     "@types/sqlite3": "^3.1.8",
     "typescript": "^4.9.4"
