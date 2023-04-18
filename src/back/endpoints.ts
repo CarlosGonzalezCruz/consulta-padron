@@ -7,7 +7,7 @@ import LdapStrategy from "passport-ldapauth";
 
 const APP = express();
 
-export async function listen(httpsPort :number, httpPort? :number) {
+export async function listen(httpsPort :number, httpPort :number | null = null) {
     https.createServer({
         key: fs.readFileSync("ssl/key.pem"),
         cert: fs.readFileSync("ssl/cert.pem")
@@ -26,7 +26,7 @@ process.on("SIGINT", async () => {
 
 function setupHttpToHttpsRedirect(httpPort :number, httpsPort :number) {
     let httpApp = express();
-    let targetHost = (req :any) => req.headers.host.replace(/(\w*):(\d{2,5})/, `$1:${httpsPort}`);
+    let targetHost = (req :any) => req.headers.host.replace(/(\w*):(\d{1,5})/, `$1:${httpsPort}`);
     httpApp.get("*", (req, res) => res.redirect(`https://${targetHost(req)}${req.url}`));
     httpApp.listen(httpPort);
     console.log(`(http) Atendiendo al puerto ${httpPort}...`);

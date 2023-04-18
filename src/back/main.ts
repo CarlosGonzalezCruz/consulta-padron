@@ -1,3 +1,5 @@
 import * as endpoints from './endpoints.js';
+import * as properties from "./properties.js";
 
-endpoints.listen(3010, 3000);
+properties.initProperties();
+endpoints.listen(properties.get("Application.https-port"), properties.get("Application.http-port", null));
