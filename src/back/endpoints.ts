@@ -2,21 +2,26 @@ import fs from "fs";
 import https from "https";
 import express from "express";
 import passport from "passport";
-import LdapStrategy from "passport-ldapauth";
+import * as properties from "./properties.js";
+import * as login from "./login.js";
 
 
 const APP = express();
 
-export async function listen(httpsPort :number, httpPort :number | null = null) {
+export async function listen() {
+    let httpsPort = properties.get<number>("Application.https-port");
+    let httpPort = properties.get<number | null>("Application.http-port", null);
     https.createServer({
-        key: fs.readFileSync("ssl/key.pem"),
-        cert: fs.readFileSync("ssl/cert.pem")
+        key: fs.readFileSync(properties.get<string>("Application.ssl-key")),
+        cert: fs.readFileSync(properties.get<string>("Application.ssl-cert"))
     }, APP).listen(httpsPort, () => {
         console.log(`(https) Atendiendo al puerto ${httpsPort}...`);
         if(httpPort != null) {
             setupHttpToHttpsRedirect(httpPort, httpsPort);
         }
     });
+
+    login.setup(APP);
 }
 
 process.on("SIGINT", async () => {
@@ -31,28 +36,6 @@ function setupHttpToHttpsRedirect(httpPort :number, httpsPort :number) {
     httpApp.listen(httpPort);
     console.log(`(http) Atendiendo al puerto ${httpPort}...`);
 }
-
-// DOESN'T WORK for now
-passport.use("ldapauth", new LdapStrategy({
-        server: {
-            url: "ldap://cconsistorial.alcala",
-            bindDN: "OU=AYUNTAMIENTO,DC=cconsistorial,DC=alcala",
-            bindProperty: "{{username}}",
-            bindCredentials: "{{password}}",
-            searchBase: "DC=cconsistorial,DC=alcala",
-            searchFilter: "(UID={{username}})"
-        },
-        usernameField: "User",
-        passwordField: "Password"
-    },
-    function(req, user, done) {
-        done(null, user);
-    })
-);
-
-// Required by Passport
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user :Express.User, done) => done(null, user));
   
 
 APP.use(express.static("web"));
@@ -65,14 +48,14 @@ APP.get('/', (request, result) => {
 });
 
 APP.post("/login", (request, result, next) => {
-    let ret = passport.authenticate("ldapauth", {session: false}, (error :Error, user :Express.User) => {
+    login.tryLogin(request, result, next);
+});
+
+APP.post("/logout", (request, result, next) => {
+    request.logout((error) => {
         if(error) {
             return next(error);
         }
-        if(!user) {
-            return result.send({success: false, message: "Authentication failed"});
-        } else {
-            return result.send(user);
-        }
-    })(request, result, next);
+        result.redirect("/");
+    });
 });

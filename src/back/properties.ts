@@ -53,6 +53,22 @@ export function get<T extends PropertiesReader.Value | null>(key :string, defaul
 }
 
 
+export function getOrElse<T extends PropertiesReader.Value | null>(...keys :string[]) :T {
+    if(keys.length == 0) {
+        throw new Error('No se ha especificiado ninguna clave');
+    } else if(keys.length == 1) {
+        return get(keys.shift()!); // Do not catch the error if this is the last key
+    } else {
+        try {
+            return get(keys.shift()!); // If key is not found, an error will be caught
+        } catch(e) {
+            return getOrElse<T>(...keys); // If an error is caught, try with the remaining keys
+        }
+    }
+    
+}
+
+
 export function* all() {
     for(let [property_key, property_value] of Object.entries(properties.getAllProperties())) {
         yield {
