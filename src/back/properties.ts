@@ -17,6 +17,7 @@ export function initProperties() {
     }
 
     let profileFilename = profile.endsWith(".ini") ? profile : `${profile}.ini`;
+    console.log(`Iniciando el programa con la configuración ${profileFilename}...`);
     let success = false;
     for(let directory of PATH) {
         try {
@@ -41,7 +42,7 @@ export function initProperties() {
 export function get<T extends PropertiesReader.Value | null>(key :string, defaultValue? :T) {
     let ret = properties.get(key) as T | null;
     if(ret == null) {
-        if(defaultValue !== undefined) {
+        if(defaultValue != undefined) {
             return defaultValue;
         } else {
             let split = key.split(".");
