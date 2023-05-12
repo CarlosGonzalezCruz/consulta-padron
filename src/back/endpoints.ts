@@ -1,7 +1,7 @@
 import fs from "fs";
 import https from "https";
 import express from "express";
-import passport from "passport";
+import * as db from "./db-queries.js";
 import * as properties from "./properties.js";
 import * as login from "./login.js";
 
@@ -44,7 +44,7 @@ APP.use(express.json());
 APP.use(express.urlencoded({extended: true}));
 
 APP.get('/', (request, result) => {
-    result.sendFile("login.html", {root: "web"});
+    result.sendFile("query.html", {root: "web"});
 });
 
 APP.post("/login", (request, result, next) => {
@@ -58,4 +58,9 @@ APP.post("/logout", (request, result, next) => {
         }
         result.redirect("/");
     });
+});
+
+APP.post("/inhabitant-data-id", async (request, result) => {
+    await db.openOracleDB();
+    result.json(await db.getInhabitantByNationalId(request.body.id));
 });

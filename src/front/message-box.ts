@@ -45,6 +45,7 @@ export function displayLoadingBox(message :string) {
                 }, 500);
                 SPINNER.removeClass("d-flex");
                 utils.setMsgBoxDismissable(true);
+                utils.setCursorLoadingState(false);
                 MSG_BOX.modal("hide");
             }, MIN_LOADING_TIME_MS);
         });
@@ -54,7 +55,8 @@ export function displayLoadingBox(message :string) {
             SPINNER.addClass("d-flex");
             MSG_BOX.off("click"); // A loading window may not be dismissed by clicking away
             MODAL_FOOTER.hide(); // A loading window may not be dismissed by clicking "OK"
-            utils.setMsgBoxDismissable(true); // A loading window may not be dismissed by pressing Enter
+            utils.setMsgBoxDismissable(false); // A loading window may not be dismissed by pressing Enter
+            utils.setCursorLoadingState(true);
             linkPromise(); // The window is now shown, the secondary promise may proceed
         }, $(".modal:visible").length != 0 ? 500 : 0);
     }), 500);

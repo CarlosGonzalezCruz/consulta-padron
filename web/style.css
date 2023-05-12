@@ -1,12 +1,106 @@
-body {
+
+.overflow-y {
+    overflow-y: auto;
+}
+
+.h-15 {
+    height: 15% !important;
+    min-height: 15%;
+}
+
+.h-20 {
+    height: 20% !important;
+    min-height: 20%;
+}
+
+.h-70 {
+    height: 70% !important;
+    min-height: 70%;
+}
+
+.adjust-to-screen {
     height: 100vh;
 }
 
-.login-title {
-    color: rgb(196, 196, 196);
-    font-variant: small-caps;
-    text-transform: capitalize;
-    text-align: center;
-    width: 100%;
-    letter-spacing: 0.5rem;
+.jquery-hidden {
+    display: none; /* Different from bootstrap's d-none in that it's not !important */
+}
+
+.option-panel {
+    margin-top: 0.5rem;
+    background: #eee;
+    border-radius: 5px;
+}
+
+.margin-gutter-columns > div {
+    border: 10px solid white;
+}
+
+.margin-gutter-columns > div:first-child {
+    border-left: 0;
+}
+
+.margin-gutter-columns > div:last-child {
+    border-right: 0;
+}
+
+.bg-red {
+    background-color: rgb(255, 89, 89);
+    color: white;
+}
+
+.bg-green {
+    background-color: rgb(89, 180, 89);
+    color: white;
+}
+
+.bg-blue {
+    background-color: rgb(89, 89, 255);
+    color: white;
+}
+
+.bg-orange {
+    background-color: rgb(255, 161, 98);
+    color: white;
+}
+
+.btn-inactive {
+    background-color: rgb(100, 100, 180);
+    color: white;
+}
+
+.btn-active {
+    background-color: rgb(255, 161, 98);
+    color: black;
+}
+
+.btn:active {
+    background-color: black;
+}
+
+.btn:hover:not(.btn-active):not(.btn-link) {
+    color: white;
+}
+
+.svg-inverted-color {
+    filter: invert(1)
+}
+
+.btn-inactive img[type='image/svg'] {
+    filter: invert(1)
+}
+
+.btn:disabled:active {
+    background-color: unset !important;
+}
+
+.svg-gray-color {
+    opacity: 0.1;
+}
+
+#inhabitant-data td:first-child {
+    text-align: right;
+    font-weight: bold;
+    padding-right: 10%;
+    width: 40%;
 }
