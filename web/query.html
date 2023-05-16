@@ -29,41 +29,71 @@
                     </div>
                 </div>
                 <div class="rounded border form-group d-flex flex-row p-2">
-                    <div class="col clearfix">
-                        <div class="col-md-9 float-right">
-                            <h5 id="inhabitant-name" class="text-center text-uppercase">Test Test Test</h5>
-                            <table id="inhabitant-data" class="table table-sm">
-                                <tr>
-                                    <td>Estado en el padrón</td>
-                                    <td>Alta</td>
-                                </tr>
-                                <tr>
-                                    <td>Nivel de estudios</td>
-                                    <td>Licenciatura o estudios universitarios finalizados</td>
-                                </tr>
-                                <tr>
-                                    <td>Dirección</td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td>Fecha de alta</td>
-                                    <td></td>
-                                </tr>
-                            </table>
+                    <div class="d-flex flex-column flex-md-row-reverse flex-fill">
+                        <div class="d-flex flex-column w-md-80 min-vh-50 mb-2 mb-md-0">
+                            <div id="default-placeholder" class="d-flex flex-column flex-fill justify-content-center align-items-center">
+                                <img src="icons/person-vcard.svg" class="img-fluid svg-gray-color w-25 mb-3"/>
+                                <h5 class="text-center">
+                                    Introduzca el Número de Identidad de un habitante para comenzar.
+                                </h5>
+                            </div>
+                            <div id="not-found-placeholder" class="d-none flex-column flex-fill justify-content-center align-items-center">
+                                <img src="icons/exclamation-circle.svg" class="img-fluid svg-gray-color w-25 mb-3"/>
+                                <h5 class="text-center">
+                                    No existen datos de habitante con el número de identidad <span id="not-found-placeholder-id-number"></span>.
+                                </h5>
+                            </div>
+                            <div id="inhabitant-data" class="d-none flex-column flex-fill justify-content-center">
+                                <div class="d-flex flex-column flex-fill">
+                                    <h5 id="inhabitant-name" class="text-center text-uppercase"></h5>
+                                    <div class="h-0 overflow-y flex-fill">
+                                        <table id="inhabitant-data-table" class="table table-sm h-0">
+                                            <!-- Will be filled in runtime -->
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-3">
+                        <div id="inhabitant-tabs" class="d-flex flex-column justify-content-center flex-grow-1 mr-md-2">
                             <ul class="list-group">
-                                <li class="list-group-item list-group-item-action active">General</li>
-                                <li class="list-group-item list-group-item-action">Habitante</li>
-                                <li class="list-group-item list-group-item-action">Inscripción</li>
-                                <li class="list-group-item list-group-item-action">Movimiento</li>                                
-                                <li class="list-group-item list-group-item-action">Vivienda</li>                                
+                                <li class="list-group-item list-group-item-action disabled">General</li>
+                                <li class="list-group-item list-group-item-action disabled">Habitante</li>
+                                <li class="list-group-item list-group-item-action disabled">Inscripción</li>
+                                <li class="list-group-item list-group-item-action disabled">Movimiento</li>                                
+                                <li class="list-group-item list-group-item-action disabled">Vivienda</li>                                
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div id="modal-dialog" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-3 d-flex justify-content-center">
+                                <img id="modal-dialog-icon" type="image/src" class="w-100 d-block svg-gray-color">
+                            </div>
+                            <div class="col-8 d-flex flex-row justify-content-center my-auto">
+                                <p class="align-middle flex-grow-1" id="modal-dialog-message"></p>
+                                <div id="modal-dialog-loading-spinner" class="flex-column justify-content-center" hidden>
+                                    <div class="spinner-border text-secondary float-right" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn btn-primary" data-dismiss="modal">Aceptar</div>
+                    </div>
+                </div>
+            </div>
+            <div id="modal-preloaded-icons" hidden>
+                <!-- Will be filled in runtime -->
+            </div>
+        </div>
+
         <script src="https://code.jquery.com/jquery-3.6.3.slim.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>

@@ -1,7 +1,12 @@
 import * as query from "./query-data.js";
+import * as msg from "./message-box.js";
+import * as utils from "./utils.js";
 
 
 query.enableSearch();
+msg.preloadMsgBoxIcons();
+utils.addModalButtonKeybinding();
+
 focusSearchBar();
 
 function focusSearchBar() {

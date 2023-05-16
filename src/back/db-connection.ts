@@ -10,10 +10,11 @@ let mysqldb :MySQL.Connection;
 
 export async function openOracleDB() {
     let success :boolean;
+    if(!!oracledb) {
+        resetCloseTimeout(closeOracleDB);
+        return;
+    }
     try {
-        if(!!oracledb) {
-            closeOracleDB();
-        }
         await establishOracleDBConnection();
         if(!!properties.get("Oracle.timeout-ms", 0)) {
             oracledbCloseTimeout = setTimeout(closeOracleDB, properties.get<number>("Oracle.timeout-ms"));
@@ -50,14 +51,20 @@ export async function closeAll() {
 
 export async function performQueryOracleDB(query :string) {
     if(!oracledb) {
-        console.error("No hay conexión con Oracle DB");
-        return null;
+        await openOracleDB();
     }
     if(!!oracledbCloseTimeout) {
-        clearTimeout(oracledbCloseTimeout);
-        oracledbCloseTimeout = setTimeout(closeOracleDB, properties.get("Oracle.timeout-ms", 0));
+        resetCloseTimeout(closeOracleDB);
     }
-    return oracledb.execute(query);
+    return oracledb!.execute(query);
+}
+
+
+function resetCloseTimeout(callback :() => void) {
+    if(!!oracledbCloseTimeout) {
+        clearTimeout(oracledbCloseTimeout);
+    }
+    oracledbCloseTimeout = setTimeout(callback, properties.get("Oracle.timeout-ms", 0));
 }
 
 

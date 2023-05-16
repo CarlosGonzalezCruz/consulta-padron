@@ -7,12 +7,50 @@ export function transcribeDateToISO(date :Date, includeTimeOfDay :boolean = fals
 }
 
 
+const MONTH_NAMES = ["<0>", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+
+export function getMonthName(id :number) {
+    if(id >= 1 && id <= 12) {
+        return MONTH_NAMES[id];
+    } else {
+        throw new RangeError(`Only values from 1 to 12 are allowed. Received: ${id}`);
+    }
+}
+
+
+export function getMonthId(name :string) {
+    let selectedId = MONTH_NAMES.indexOf(name.toUpperCase());
+    if(selectedId != -1) {
+        return selectedId;
+    } else {
+        return null;
+    }
+}
+
+
+export function* allMonthNames() {
+    for(let i = 1; i < 13; i++) {
+        yield MONTH_NAMES[i];
+    }
+}
+
+
+export function writeDate(date :Date) {
+    return `${date.getDate()} de ${getMonthName(date.getMonth() + 1)}, ${date.getFullYear()}`;
+}
+
+
 export function enforceTwoDigits(value :number) {
     if(value < 10) {
         return "0" + value;
     } else {
         return value.toString();
     }
+}
+
+
+export function ensureNotNull<T>(value :T | null | undefined) : value is T {
+    return value != null;
 }
 
 

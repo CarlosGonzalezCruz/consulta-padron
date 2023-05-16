@@ -1,7 +1,7 @@
 import fs from "fs";
 import https from "https";
 import express from "express";
-import * as db from "./db-queries.js";
+import * as inhabitant from "./inhabitant-data.js"
 import * as properties from "./properties.js";
 import * as login from "./login.js";
 
@@ -61,6 +61,5 @@ APP.post("/logout", (request, result, next) => {
 });
 
 APP.post("/inhabitant-data-id", async (request, result) => {
-    await db.openOracleDB();
-    result.json(await db.getInhabitantByNationalId(request.body.id));
+    result.json(await inhabitant.generateEntriesFor(request.body.id));
 });

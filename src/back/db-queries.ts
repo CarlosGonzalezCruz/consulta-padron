@@ -15,11 +15,11 @@ export function closeAll() {
 }
 
 
-export async function getInhabitantByNationalId(id :string) {
+export async function getInhabitantByNationalId(id :string, fields :string[]) {
     let result = await db.performQueryOracleDB(
         `
-            SELECT * FROM REPOS.PMH_HABITANTE
-            WHERE DOC_IDENTIFICADOR = '${id}'
+            SELECT NOMBRE_COMPLETO,${fields.join(",")} FROM REPOS.PMH_HABITANTE
+            WHERE DOC_IDENTIFICADOR = '${id}' AND ES_ULTIMO = 'T'
             FETCH NEXT 1 ROWS ONLY
         `
     );

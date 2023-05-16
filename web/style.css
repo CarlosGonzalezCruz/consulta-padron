@@ -3,6 +3,12 @@
     overflow-y: auto;
 }
 
+
+.h-0 {
+    min-height: 0 !important;
+    height: 0 !important;
+}
+
 .h-15 {
     height: 15% !important;
     min-height: 15%;
@@ -16,6 +22,22 @@
 .h-70 {
     height: 70% !important;
     min-height: 70%;
+}
+
+.min-vh-50 {
+    min-height: 50vh !important;
+}
+
+.w-15 {
+    width: 15% !important;
+    min-width: 15% !important;
+}
+
+@media (min-width: 768px) {
+    .w-md-80 {
+        width: 80% !important;
+        min-width: 80%;
+    }
 }
 
 .adjust-to-screen {
@@ -98,7 +120,15 @@
     opacity: 0.1;
 }
 
-#inhabitant-data td:first-child {
+.no-data-indicator {
+    background-color: rgb(243, 243, 243);
+    border-radius: 5px;
+    padding: 0 4em;
+    color: gray;
+    font-size: small;
+}
+
+#inhabitant-data-table td:first-child {
     text-align: right;
     font-weight: bold;
     padding-right: 10%;
