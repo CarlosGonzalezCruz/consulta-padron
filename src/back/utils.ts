@@ -36,7 +36,7 @@ export function* allMonthNames() {
 
 
 export function writeDate(date :Date) {
-    return `${date.getDate()} de ${getMonthName(date.getMonth() + 1)}, ${date.getFullYear()}`;
+    return `${date.getDate() + 1} de ${getMonthName(date.getMonth() + 1)}, ${date.getFullYear()}`;
 }
 
 

@@ -1,5 +1,6 @@
 import * as utils from "./utils.js";
 import * as msg from "./message-box.js";
+import * as dni from "./id-doc.js";
 
 
 export async function enableSearch() {
@@ -17,12 +18,29 @@ export async function enableSearch() {
 }
 
 
-async function queryAndPopulatePage(id :string) {
-    let loadingHandler = msg.displayLoadingBox(`Buscando habitante con ID ${id}...`);
-    let result = await fetchInhabitantDataByNationalId(id);
+async function queryAndPopulatePage(idDoc :string) {
+    let processedId = dni.processIdDocument(idDoc);
+    if(!processedId.valid) {
+        if(processedId.error) {
+            msg.displayMessageBox(`Ha ocurrido un error inesperado al procesar el siguiente DNI ó NIE: ${idDoc}`, "error")
+        } else {
+            if(!!processedId.display) {
+                msg.displayMessageBox(`El siguiente DNI ó NIE no es válido: ${processedId.display}` +
+                (processedId.expectedControl != processedId.control ? `. Se esperaba el carácter de control '${processedId.expectedControl}'` : ""), "error");
+            } else {
+                msg.displayMessageBox(`El DNI ó NIE introducido no es válido.`, "error");
+            }
+        }
+        return;
+    }
+
+    let loadingHandler = msg.displayLoadingBox(`Buscando habitante con ID ${processedId.display}...`);
+    
+    let result = await fetchInhabitantDataByNationalId(processedId.queryDigits);
+    $("#inhabitant-id-field").val(processedId.display);
     if(!result) {
         await utils.concludeAndWait(loadingHandler);
-        $("#not-found-placeholder-id-number").text(id);
+        $("#not-found-placeholder-id-number").text(processedId.display);
         makeTableVisible(false);
     } else {
         await utils.concludeAndWait(loadingHandler);
@@ -61,19 +79,20 @@ function populateTable(entries :any[]) {
 
 
 function makeTableVisible(visible :boolean) {
+    $("#inhabitant-data-container").addClass("blink").one("animationend", function() {
+        $(this).removeClass("blink");
+    });
+
     if(visible) {
-        $("#default-placeholder").addClass("d-none");
-        $("#default-placeholder").removeClass("d-flex");
-        $("#not-found-placeholder").addClass("d-none");
-        $("#not-found-placeholder").removeClass("d-flex");
+        $("#inhabitant-data-container .placeholder").addClass("d-none");
+        $("#inhabitant-data-container .placeholder").removeClass("d-flex");
         $("#inhabitant-data").addClass("d-flex");
         $("#inhabitant-data").removeClass("d-none");
         $("#inhabitant-tabs li").removeClass("disabled");
     } else {
-        $("#default-placeholder").addClass("d-none");
-        $("#default-placeholder").removeClass("d-flex");
+        $("#inhabitant-data-container .placeholder").addClass("d-none");
+        $("#inhabitant-data-container .placeholder").removeClass("d-flex");
         $("#not-found-placeholder").addClass("d-flex");
-        $("#not-found-placeholder").removeClass("d-none");
         $("#inhabitant-data").removeClass("d-flex");
         $("#inhabitant-data").addClass("d-none");
         $("#inhabitant-tabs li").addClass("disabled");

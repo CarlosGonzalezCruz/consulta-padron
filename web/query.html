@@ -28,33 +28,35 @@
                         </div>
                     </div>
                 </div>
-                <div class="rounded border form-group d-flex flex-row p-2">
-                    <div class="d-flex flex-column flex-md-row-reverse flex-fill">
-                        <div class="d-flex flex-column w-md-80 min-vh-50 mb-2 mb-md-0">
-                            <div id="default-placeholder" class="d-flex flex-column flex-fill justify-content-center align-items-center">
-                                <img src="icons/person-vcard.svg" class="img-fluid svg-gray-color w-25 mb-3"/>
-                                <h5 class="text-center">
-                                    Introduzca el Número de Identidad de un habitante para comenzar.
-                                </h5>
-                            </div>
-                            <div id="not-found-placeholder" class="d-none flex-column flex-fill justify-content-center align-items-center">
-                                <img src="icons/exclamation-circle.svg" class="img-fluid svg-gray-color w-25 mb-3"/>
-                                <h5 class="text-center">
-                                    No existen datos de habitante con el número de identidad <span id="not-found-placeholder-id-number"></span>.
-                                </h5>
-                            </div>
-                            <div id="inhabitant-data" class="d-none flex-column flex-fill justify-content-center">
-                                <div class="d-flex flex-column flex-fill">
-                                    <h5 id="inhabitant-name" class="text-center text-uppercase"></h5>
-                                    <div class="h-0 overflow-y flex-fill">
-                                        <table id="inhabitant-data-table" class="table table-sm h-0">
-                                            <!-- Will be filled in runtime -->
-                                        </table>
+                <div class="d-flex flex-row">
+                    <div class=" d-flex flex-column flex-md-row-reverse flex-fill">
+                        <div class="rounded border d-flex flex-column w-md-80 min-vh-50 mb-2 mb-md-0 p-3">
+                            <div id="inhabitant-data-container" class="d-flex flex-column flex-fill">
+                                <div id="default-placeholder" class="placeholder d-flex flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/person-vcard.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        Introduzca el Número de Identidad de un habitante para comenzar.
+                                    </h5>
+                                </div>
+                                <div id="not-found-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/exclamation-circle.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        No existen datos de habitante con el número de identidad <span id="not-found-placeholder-id-number"></span>.
+                                    </h5>
+                                </div>
+                                <div id="inhabitant-data" class="d-none flex-column flex-fill justify-content-center">
+                                    <div class="d-flex flex-column flex-fill">
+                                        <h5 id="inhabitant-name" class="text-center text-uppercase mb-3"></h5>
+                                        <div class="h-0 overflow-y flex-fill">
+                                            <table id="inhabitant-data-table" class="table table-sm h-0">
+                                                <!-- Will be filled in runtime -->
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="inhabitant-tabs" class="d-flex flex-column justify-content-center flex-grow-1 mr-md-2">
+                        <div id="inhabitant-tabs" class="d-flex flex-column flex-grow-1 mr-md-3">
                             <ul class="list-group">
                                 <li class="list-group-item list-group-item-action disabled">General</li>
                                 <li class="list-group-item list-group-item-action disabled">Habitante</li>

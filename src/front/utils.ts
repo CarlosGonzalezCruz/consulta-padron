@@ -62,3 +62,11 @@ export async function displayProfileEnvironmentLabel() {
         $("#profile-environment-label").text(label);
     }
 }
+
+
+export function enforceDigits(value :string | number, minDigits :number) {
+    if(typeof value != "string") {
+        value = value.toString();
+    }
+    return "0".repeat(Math.max(minDigits - value.length, 0)) + value;
+}

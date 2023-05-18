@@ -134,3 +134,19 @@
     padding-right: 10%;
     width: 40%;
 }
+
+
+@keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.2;
+    }
+}
+ 
+
+.blink {
+    animation: blink 0.15s 2 both;
+}

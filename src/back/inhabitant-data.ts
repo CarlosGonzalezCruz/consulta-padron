@@ -19,9 +19,9 @@ const ENTRIES = [
     }
 ];
 
-export async function generateEntriesFor(id :string) {
+export async function generateEntriesFor(idDoc :string) {
     let selectedFields = ENTRIES.map(e => e.field).filter(utils.ensureNotNull);
-    let query = await db.getInhabitantByNationalId(id, selectedFields);
+    let query = await db.getInhabitantByIdDoc(idDoc, selectedFields);
     if(!query || query.length == 0) {
         return null;
     }
