@@ -54,6 +54,11 @@ export function ensureNotNull<T>(value :T | null | undefined) : value is T {
 }
 
 
+export async function asyncArrayMap<T, U>(array :T[], conversionFn :(value :T) => Promise<U>) {
+    return Promise.all(array.map(async v => await conversionFn(v)));
+}
+
+
 export function restartApplication() {
     process.on("exit", () => {
         child_process.spawn(process.argv.shift() + "", process.argv, {

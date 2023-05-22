@@ -79,6 +79,7 @@ export function processIdDocument(idDoc :string) :IdDocData {
         }
 
     } catch(e) {
+        console.error(`No se ha podido procesar el ID ${idDoc}. Causa: ${e}`);
         ret.error = true;
     }
 

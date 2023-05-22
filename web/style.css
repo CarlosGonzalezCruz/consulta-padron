@@ -136,17 +136,15 @@
 }
 
 
-@keyframes blink {
-    0%,
+@keyframes fade-in {
+    0% {
+        opacity: 0.2;
+    }
     100% {
       opacity: 1;
     }
-    50% {
-      opacity: 0.2;
-    }
 }
- 
 
-.blink {
-    animation: blink 0.15s 2 both;
+.fade-in {
+    animation: fade-in 0.15s 1 both;
 }

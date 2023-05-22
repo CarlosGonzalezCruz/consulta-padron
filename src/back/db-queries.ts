@@ -27,6 +27,22 @@ export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
 }
 
 
+export async function getAcademicLevelDescription(id :number) {
+    let result = await db.performQueryOracleDB(
+        `
+            SELECT DESCRIPCION FROM REPOS.PMH_NIV_INSTRUCCION_T
+            WHERE DESCRIPCION LIKE '${id}%' AND VALIDATED=1
+        `
+    );
+    let rows = mapOracleDBResult(result);
+    if(!!rows && rows.length > 0) {
+        return rows[0].DESCRIPCION as string;
+    } else {
+        return null;
+    }
+}
+
+
 function mapOracleDBResult<T>(result :Result<T> | null) {
     if(result == null) {
         return null;

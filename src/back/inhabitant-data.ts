@@ -15,7 +15,8 @@ const ENTRIES = [
     },
     {
         displayKey: "Nivel de estudios",
-        field: "COD_NIVEL_INSTRUCCION"
+        field: "COD_NIVEL_INSTRUCCION",
+        render: async (v :number) => await db.getAcademicLevelDescription(v)
     }
 ];
 
@@ -27,12 +28,12 @@ export async function generateEntriesFor(idDoc :string) {
     }
     return query != null ? {
         fullName: query[0]["NOMBRE_COMPLETO"],
-        entries: ENTRIES.slice().map(e => calculateValues(query, e))
+        entries: await utils.asyncArrayMap(ENTRIES, async e => await calculateValues(query, e))
     }: null;
 }
 
 
-function calculateValues(query :any, entry :any) {
+async function calculateValues(query :any, entry :any) {
     let displayValue = "";
     let value :any = null;
     if(!!entry.field) {
@@ -43,7 +44,7 @@ function calculateValues(query :any, entry :any) {
         }
     }
     if(!!entry.render && value != null) {
-        displayValue = entry.render(value);
+        displayValue = await entry.render(value);
     } else {
         displayValue = value;
     }

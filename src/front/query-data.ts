@@ -15,6 +15,15 @@ export async function enableSearch() {
     $("#btn-search").on("click", () => {
         queryAndPopulatePage($("#inhabitant-id-field").val() as string);
     });
+    window.addEventListener("popstate", e => {
+        $("#inhabitant-id-field").val(e.state?.id ?? "");
+        if(!!e.state?.id) {
+            queryAndPopulatePage(e.state.id);
+        } else {
+            $("#inhabitant-id-field").val("");
+            makeTableVisible(false, true);
+        }
+    });
 }
 
 
@@ -36,25 +45,32 @@ async function queryAndPopulatePage(idDoc :string) {
 
     let loadingHandler = msg.displayLoadingBox(`Buscando habitante con ID ${processedId.display}...`);
     
-    let result = await fetchInhabitantDataByNationalId(processedId.queryDigits);
-    $("#inhabitant-id-field").val(processedId.display);
-    if(!result) {
+    try {
+        let result = await fetchInhabitantDataByNationalId(processedId.queryDigits);
+        $("#inhabitant-id-field").val(processedId.display);
+        history.pushState({id: processedId.display}, '');
+        if(!result) {
+            await utils.concludeAndWait(loadingHandler);
+            $("#not-found-placeholder-id-number").text(processedId.display);
+            makeTableVisible(false);
+        } else {
+            await utils.concludeAndWait(loadingHandler);
+            console.log(result);
+            $("#inhabitant-name").text(result.fullName);
+            populateTable(result.entries);
+            makeTableVisible(true);
+        }
+    } catch(e) {
         await utils.concludeAndWait(loadingHandler);
-        $("#not-found-placeholder-id-number").text(processedId.display);
-        makeTableVisible(false);
-    } else {
-        await utils.concludeAndWait(loadingHandler);
-        console.log(result);
-        $("#inhabitant-name").text(result.fullName);
-        populateTable(result.entries);
-        makeTableVisible(true);
+        msg.displayMessageBox("Ha ocurrido un problema al conectar con el servidor", "error");
+        throw Error(`Ha ocurrido un problema al conectar con el servidor. Causa: ${e}`);
     }
 }
 
 
 async function fetchInhabitantDataByNationalId(id :string) {
     let fetchInit = {
-        method: "post",
+        method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             id: id
@@ -78,9 +94,9 @@ function populateTable(entries :any[]) {
 }
 
 
-function makeTableVisible(visible :boolean) {
-    $("#inhabitant-data-container").addClass("blink").one("animationend", function() {
-        $(this).removeClass("blink");
+function makeTableVisible(visible :boolean, displayDefault :boolean = false) {
+    $("#inhabitant-data-container").addClass("fade-in").one("animationend", function() {
+        $(this).removeClass("fade-in");
     });
 
     if(visible) {
@@ -89,6 +105,13 @@ function makeTableVisible(visible :boolean) {
         $("#inhabitant-data").addClass("d-flex");
         $("#inhabitant-data").removeClass("d-none");
         $("#inhabitant-tabs li").removeClass("disabled");
+    } else if(displayDefault) {
+        $("#inhabitant-data-container .placeholder").addClass("d-none");
+        $("#inhabitant-data-container .placeholder").removeClass("d-flex");
+        $("#default-placeholder").addClass("d-flex");
+        $("#inhabitant-data").removeClass("d-flex");
+        $("#inhabitant-data").addClass("d-none");
+        $("#inhabitant-tabs li").addClass("disabled");
     } else {
         $("#inhabitant-data-container .placeholder").addClass("d-none");
         $("#inhabitant-data-container .placeholder").removeClass("d-flex");
