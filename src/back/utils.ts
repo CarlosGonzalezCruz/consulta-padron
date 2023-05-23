@@ -40,6 +40,15 @@ export function writeDate(date :Date) {
 }
 
 
+export function writeBoolean(value :Boolean | 'T' | 'F' | null) {
+    if(value == null) {
+        return null;
+    } else {
+        return (value == true || value == 'T') ? "Sí" : "No";
+    }
+}
+
+
 export function enforceTwoDigits(value :number) {
     if(value < 10) {
         return "0" + value;

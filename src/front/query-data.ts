@@ -3,6 +3,9 @@ import * as msg from "./message-box.js";
 import * as dni from "./id-doc.js";
 
 
+let lastResult :any;
+
+
 export async function enableSearch() {
     await utils.documentReady();
 
@@ -18,7 +21,7 @@ export async function enableSearch() {
     window.addEventListener("popstate", e => {
         $("#inhabitant-id-field").val(e.state?.id ?? "");
         if(!!e.state?.id) {
-            queryAndPopulatePage(e.state.id);
+            queryAndPopulatePage(e.state.id, false);
         } else {
             $("#inhabitant-id-field").val("");
             makeTableVisible(false, true);
@@ -27,7 +30,16 @@ export async function enableSearch() {
 }
 
 
-async function queryAndPopulatePage(idDoc :string) {
+export async function enableTabs() {
+    await utils.documentReady();
+
+    $("#inhabitant-tabs li").on("click", function() {
+        updateTableAndTabs($(this));
+    });
+}
+
+
+async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
     let processedId = dni.processIdDocument(idDoc);
     if(!processedId.valid) {
         if(processedId.error) {
@@ -48,16 +60,20 @@ async function queryAndPopulatePage(idDoc :string) {
     try {
         let result = await fetchInhabitantDataByNationalId(processedId.queryDigits);
         $("#inhabitant-id-field").val(processedId.display);
-        history.pushState({id: processedId.display}, '');
+        if(saveHistory) {
+            history.pushState({id: processedId.display}, '');
+        }
         if(!result) {
             await utils.concludeAndWait(loadingHandler);
             $("#not-found-placeholder-id-number").text(processedId.display);
+            $("#inhabitant-tabs li").removeClass("active");
             makeTableVisible(false);
         } else {
             await utils.concludeAndWait(loadingHandler);
+            lastResult = result;
             console.log(result);
-            $("#inhabitant-name").text(result.fullName);
-            populateTable(result.entries);
+            $("#inhabitant-name").text(lastResult.fullName);
+            updateTableAndTabs($("#inhabitant-tabs li[tab-content='overview']"));
             makeTableVisible(true);
         }
     } catch(e) {
@@ -82,13 +98,32 @@ async function fetchInhabitantDataByNationalId(id :string) {
 }
 
 
+function updateTableAndTabs(clickedTab :JQuery) {
+    $("#inhabitant-tabs li").removeClass("active");
+    clickedTab.addClass("active");
+
+    let entries = [];
+    switch(clickedTab.attr("tab-content")) {
+        case "overview":
+            entries = lastResult.entries.filter((e :any) => e.value != null);
+            break;
+        case "complete":
+            entries = lastResult.entries;
+            break;
+        default:
+            throw Error("Pestaña inválida");
+    }
+    populateTable(entries);
+}
+
+
 function populateTable(entries :any[]) {
     const TABLE = $("#inhabitant-data-table");
     TABLE.empty();
     for(let entry of entries) {
         let row = $("<tr>");
         row.append(`<td>${entry.displayKey}</td>`);
-        row.append(`<td>${entry.value}</td>`);
+        row.append(`<td>${entry.displayValue}</td>`);
         TABLE.append(row);
     }
 }

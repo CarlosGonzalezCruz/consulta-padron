@@ -21,7 +21,7 @@ export function documentReady() {
 }
 
 
-let msgBoxIsDismissable = false;
+let msgBoxIsDismissable = true;
 
 
 export function isMsgBoxDismissable() {

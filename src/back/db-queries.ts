@@ -18,8 +18,12 @@ export function closeAll() {
 export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
     let result = await db.performQueryOracleDB(
         `
-            SELECT NOMBRE_COMPLETO,${fields.join(",")} FROM REPOS.PMH_HABITANTE
-            WHERE DOC_IDENTIFICADOR = '${idDoc}' AND ES_ULTIMO = 'T'
+            SELECT NOMBRE_COMPLETO,${fields.join(",")} FROM REPOS.PMH_SIT_HABITANTE SIT
+            LEFT JOIN REPOS.PMH_HABITANTE HAB ON HAB.DBOID = SIT.HABITANTE_ID
+            LEFT JOIN REPOS.PMH_INSCRIPCION INS ON INS.DBOID = SIT.INSCRIPCION_ID
+            LEFT JOIN REPOS.PMH_MOVIMIENTO MOV ON MOV.DBOID = SIT.MOVIMIENTO_ID
+            LEFT JOIN REPOS.PMH_VIVIENDA VIV ON VIV.DBOID = SIT.VIVIENDA_ID
+            WHERE HAB.DOC_IDENTIFICADOR = '${idDoc}' AND SIT.ES_ULTIMO = 'T' AND SIT.ES_VIGENTE = 'T'
             FETCH NEXT 1 ROWS ONLY
         `
     );

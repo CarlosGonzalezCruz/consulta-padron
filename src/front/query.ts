@@ -4,6 +4,8 @@ import * as utils from "./utils.js";
 
 
 query.enableSearch();
+query.enableTabs();
+
 msg.preloadMsgBoxIcons();
 utils.addModalButtonKeybinding();
 
