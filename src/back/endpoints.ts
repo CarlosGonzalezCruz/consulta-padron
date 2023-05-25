@@ -44,20 +44,15 @@ APP.use(express.json());
 APP.use(express.urlencoded({extended: true}));
 
 APP.get('/', (request, result) => {
-    result.sendFile("query.html", {root: "web"});
+    result.sendFile("login.html", {root: "web"});
 });
 
-APP.post("/login", (request, result, next) => {
-    login.tryLogin(request, result, next);
+APP.post("/login", (request, result) => {
+    login.tryLogin(request, result);
 });
 
-APP.post("/logout", (request, result, next) => {
-    request.logout((error) => {
-        if(error) {
-            return next(error);
-        }
-        result.redirect("/");
-    });
+APP.post("/logout", (request, result) => {
+    login.logout(request, result);
 });
 
 APP.post("/inhabitant-data-id", async (request, result) => {

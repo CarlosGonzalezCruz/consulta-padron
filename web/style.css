@@ -130,6 +130,16 @@
     font-size: small;
 }
 
+.login-title {
+    color: rgb(196, 196, 196);
+    font-variant: small-caps;
+    text-transform: capitalize;
+    text-align: center;
+    width: 100%;
+    letter-spacing: 0.5rem;
+}
+
+
 #inhabitant-data-table td:first-child {
     text-align: right;
     font-weight: bold;
