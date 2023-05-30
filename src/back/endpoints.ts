@@ -4,11 +4,13 @@ import express from "express";
 import * as inhabitant from "./inhabitant-data.js"
 import * as properties from "./properties.js";
 import * as login from "./login.js";
+import * as utils from "./utils.js";
 
 
 const APP = express();
 
 export async function listen() {
+    login.setup(APP);
     let httpsPort = properties.get<number>("Application.https-port");
     let httpPort = properties.get<number | null>("Application.http-port", null);
     https.createServer({
@@ -21,7 +23,6 @@ export async function listen() {
         }
     });
 
-    login.setup(APP);
 }
 
 process.on("SIGINT", async () => {
@@ -36,25 +37,45 @@ function setupHttpToHttpsRedirect(httpPort :number, httpsPort :number) {
     httpApp.listen(httpPort);
     console.log(`(http) Atendiendo al puerto ${httpPort}...`);
 }
-  
+
 
 APP.use(express.static("web"));
 APP.use(express.static("out/front"));
 APP.use(express.json());
 APP.use(express.urlencoded({extended: true}));
 
-APP.get('/', (request, result) => {
+endpoint('/', "GET", (request, result) => {
+    result.redirect("/login");
+});
+
+endpoint('/login', "GET", (request, result) => {
     result.sendFile("login.html", {root: "web"});
 });
 
-APP.post("/login", (request, result) => {
+endpoint('/query', "GET", (request, result) => {
+    result.sendFile("query.html", {root: "web"});
+});
+
+endpoint("/login", "POST", (request, result) => {
     login.tryLogin(request, result);
 });
 
-APP.post("/logout", (request, result) => {
+endpoint("/logout", "POST", (request, result) => {
     login.logout(request, result);
 });
 
-APP.post("/inhabitant-data-id", async (request, result) => {
+endpoint("/inhabitant-data-id", "POST", async (request, result) => {
     result.json(await inhabitant.generateEntriesFor(request.body.id));
 });
+
+
+async function endpoint(uri :string, rest :"GET" | "POST", callback :(request :any, result :any) => any) {
+    await utils.passportReady();
+    switch(rest) {
+        case "GET":
+            APP.get(uri, callback);
+            break;
+        case "POST":
+            APP.post(uri, callback);
+    }
+}

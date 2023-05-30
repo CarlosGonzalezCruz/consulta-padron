@@ -3,7 +3,6 @@
     overflow-y: auto;
 }
 
-
 .h-0 {
     min-height: 0 !important;
     height: 0 !important;
@@ -38,6 +37,10 @@
         width: 80% !important;
         min-width: 80%;
     }
+}
+
+.fixed-w-300 {
+    width: 300px;
 }
 
 .adjust-to-screen {
@@ -104,6 +107,11 @@
     color: white;
 }
 
+.list-group-item-action:hover,
+.btn-link:hover {
+    cursor: pointer;
+}
+
 .svg-inverted-color {
     filter: invert(1)
 }
@@ -139,6 +147,9 @@
     letter-spacing: 0.5rem;
 }
 
+.login-error {
+    color:rgb(255, 36, 36);
+}
 
 #inhabitant-data-table td:first-child {
     text-align: right;

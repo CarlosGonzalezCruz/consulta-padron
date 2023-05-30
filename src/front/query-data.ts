@@ -1,6 +1,7 @@
 import * as utils from "./utils.js";
 import * as msg from "./message-box.js";
 import * as dni from "./id-doc.js";
+import * as session from "./session.js";
 
 
 let lastResult :any;
@@ -36,6 +37,43 @@ export async function enableTabs() {
     $("#inhabitant-tabs li").on("click", function() {
         updateTableAndTabs($(this));
     });
+}
+
+
+export async function enableSessionLinks() {
+    await utils.documentReady();
+
+    $("#session-logout").on("click", () => {
+        doLogout();
+    });
+}
+
+
+async function doLogout() {
+    if(!session.exists()) {
+        return;
+    }
+    let loadingHandler = msg.displayLoadingBox("Cerrando sesión...");
+
+    try {
+        let fetchRequest = await fetch("/logout", {
+            method: "post",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include"
+        });
+        let data = await fetchRequest.json();
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            session.end();
+            window.location.href = "/login";
+        } else {
+            msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión", 'error');
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        console.error(`Ha ocurrido un problema al cerrar sesión. Causa: ${e}`);
+        msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión", 'error');
+    }
 }
 
 
@@ -130,9 +168,7 @@ function populateTable(entries :any[]) {
 
 
 function makeTableVisible(visible :boolean, displayDefault :boolean = false) {
-    $("#inhabitant-data-container").addClass("fade-in").one("animationend", function() {
-        $(this).removeClass("fade-in");
-    });
+    utils.playCssAnimationOnce($("#inhabitant-data-container"), "fade-in");
 
     if(visible) {
         $("#inhabitant-data-container .placeholder").addClass("d-none");

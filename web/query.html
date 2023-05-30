@@ -56,11 +56,29 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="inhabitant-tabs" class="d-flex flex-column flex-grow-1 mr-md-3">
-                            <ul class="list-group">
-                                <li class="list-group-item list-group-item-action disabled" tab-content="overview">Vista resumen</li>
-                                <li class="list-group-item list-group-item-action disabled" tab-content="complete">Vista completa</li>                             
-                            </ul>
+                        <div class="d-flex flex-column flex-grow-1 mr-md-3">
+                            <div id="inhabitant-tabs">
+                                <ul class="list-group">
+                                    <li class="list-group-item list-group-item-action disabled" tab-content="overview">Vista resumen</li>
+                                    <li class="list-group-item list-group-item-action disabled" tab-content="complete">Vista completa</li>                             
+                                </ul>
+                            </div>
+                            <div class="rounded border d-flex flex-row mt-2 mt-md-auto p-2 mw-100">
+                                <div class="d-flex flex-column flex-md-grow-1 align-middle">
+                                    <img src="icons/person-fill.svg" class="img-fluid svg-gray-color flex-fill p-1">
+                                </div>
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <div class="d-flex flex-row">
+                                        <b id="session-username">&lt;/&gt;</b>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <small>Administrar roles</small>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <small id="session-logout" class="btn-link">Cerrar sesión</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

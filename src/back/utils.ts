@@ -68,6 +68,26 @@ export async function asyncArrayMap<T, U>(array :T[], conversionFn :(value :T) =
 }
 
 
+let passportReadyResolve :() => void;
+let passportReadyPromise = new Promise<void>(resolve => {
+    passportReadyResolve = resolve;
+});
+
+
+export function triggerPassportReady() {
+    passportReadyResolve();
+}
+
+
+export async function passportReady() {
+    if(!passportReadyPromise) {
+        return;
+    } else {
+        await passportReadyPromise;
+    }
+} 
+
+
 export function restartApplication() {
     process.on("exit", () => {
         child_process.spawn(process.argv.shift() + "", process.argv, {
