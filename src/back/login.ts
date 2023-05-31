@@ -14,26 +14,14 @@ const SESSION_DB_PATH = "db";
 
 let ldapClient :ldap.Client;
 let ldapDomain :string;
-let ldapUsernameMatch :RegExp;
 let ldapSecret :string;
 let ldapTimeout :string;
 
 export function setup(app :Express) {
     
     ldapSecret = properties.get("LDAP.secret");
-    
-    initOrResetLdapClient();
-    
     ldapDomain = `@${properties.get("LDAP.domain")}`;
-    ldapUsernameMatch = new RegExp(`^(\w{1,})(${properties.get<string>("LDAP.domain").replace(/[#-}]/g, '\\$&')})$`);
-    
-    ldapTimeout = `${properties.get<number>("LDAP.timeout-s", 300)}s`;
-
-    ldapClient.on("error", e => {
-        if(e.code == "ECONNRESET") {
-            initOrResetLdapClient();
-        }
-    });    
+    ldapTimeout = `${properties.get<number>("LDAP.timeout-s", 300)}s`;   
         
     fs.mkdirSync(SESSION_DB_PATH, {recursive: true});
 
@@ -78,8 +66,9 @@ export function setup(app :Express) {
         if(!baseDN.endsWith(ldapDomain)) {
             baseDN = username + ldapDomain;
         } else {
-            username = baseDN.replace(ldapUsernameMatch, "$1");
+            username = baseDN.split('@')[0];
         }
+        initOrResetLdapClient();
         ldapClient.bind(baseDN, password, error => {
             if(error) {
                 console.error(`La autenticación ha fallado. Causa: ${error}`);
@@ -91,7 +80,8 @@ export function setup(app :Express) {
                 });
             }
             ldapClient.unbind();
-        });
+            ldapClient.destroy();
+            });
         })
     );
 
@@ -107,7 +97,7 @@ function initOrResetLdapClient() {
     if(!!ldapClient) {
         ldapClient.destroy();
     }
-    ldapClient = ldapClient = ldap.createClient({
+    ldapClient = ldap.createClient({
         url: properties.get<string>("LDAP.address"),
         reconnect: true
     });
