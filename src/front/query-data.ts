@@ -97,26 +97,38 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
     
     try {
         let result = await fetchInhabitantDataByNationalId(processedId.queryDigits);
+        console.log(result);
+        if(!result.success) {
+            await utils.concludeAndWait(loadingHandler);
+            if(result.expired) {
+                msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo", 'error',
+                    () => window.location.href = "/login");
+            } else {
+                msg.displayMessageBox("La sesión actual no es válida. Por favor, inice sesión de nuevo", 'error',
+                    () => window.location.href = "/login");
+            }
+            return;
+        }
+
         $("#inhabitant-id-field").val(processedId.display);
         if(saveHistory) {
             history.pushState({id: processedId.display}, '');
         }
-        if(!result) {
+        if(!result.data) {
             await utils.concludeAndWait(loadingHandler);
             $("#not-found-placeholder-id-number").text(processedId.display);
             $("#inhabitant-tabs li").removeClass("active");
             makeTableVisible(false);
         } else {
             await utils.concludeAndWait(loadingHandler);
-            lastResult = result;
-            console.log(result);
+            lastResult = result.data;
             $("#inhabitant-name").text(lastResult.fullName);
             updateTableAndTabs($("#inhabitant-tabs li[tab-content='overview']"));
             makeTableVisible(true);
         }
     } catch(e) {
         await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al conectar con el servidor", "error");
+        msg.displayMessageBox("Ha ocurrido un problema al conectar con el servidor", 'error');
         throw Error(`Ha ocurrido un problema al conectar con el servidor. Causa: ${e}`);
     }
 }

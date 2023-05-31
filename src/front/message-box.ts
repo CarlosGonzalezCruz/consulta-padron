@@ -8,9 +8,16 @@ const MSG_BOX_ICONS = {
     load: "icons/hourglass.svg"
 };
 
-export function displayMessageBox(message :string, icon :keyof typeof MSG_BOX_ICONS = "none") {
+
+let onMessageBoxClosed :(() => any) | null = null;
+
+
+export function displayMessageBox(message :string, icon :keyof typeof MSG_BOX_ICONS = "none", onClosed? :() => any) {
     MSG_BOX.find("#modal-dialog-message").text(message);
     MSG_BOX.find("#modal-dialog-icon").attr("src", MSG_BOX_ICONS[icon]);
+    if(!!onClosed) {
+        $("#modal-dialog").one("hidden.bs.modal", () => {console.log("On closed called"); onClosed();});
+    }
     if($(".modal:visible").length == 0) {
         MSG_BOX.modal("show");
     } else {

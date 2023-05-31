@@ -16,6 +16,7 @@ let ldapClient :ldap.Client;
 let ldapDomain :string;
 let ldapUsernameMatch :RegExp;
 let ldapSecret :string;
+let ldapTimeout :string;
 
 export function setup(app :Express) {
     
@@ -26,6 +27,8 @@ export function setup(app :Express) {
     ldapDomain = `@${properties.get("LDAP.domain")}`;
     ldapUsernameMatch = new RegExp(`^(\w{1,})(${properties.get<string>("LDAP.domain").replace(/[#-}]/g, '\\$&')})$`);
     
+    ldapTimeout = `${properties.get<number>("LDAP.timeout-s", 300)}s`;
+
     ldapClient.on("error", e => {
         if(e.code == "ECONNRESET") {
             initOrResetLdapClient();
@@ -36,7 +39,7 @@ export function setup(app :Express) {
 
     app.use(session({
         secret: properties.get<string>("LDAP.secret"),
-        resave: false,
+        resave: true,
         saveUninitialized: false,
         // @ts-ignore - Ignore declaration mismatch between express-session's Store and connect-sqlite3's Store
         store: new (SQLiteStoreFactory(session))({ db: "sessions.db", dir: SESSION_DB_PATH })
@@ -47,14 +50,14 @@ export function setup(app :Express) {
     passport.use(new LocalStrategy({
         usernameField: "User",
         passwordField: "Password",
-        session: false,
+        session: true,
     }, (username, password, done) => {
 
         if(properties.get("Admin.enabled", true)) {
             if(username == properties.get("Admin.username") && password == properties.get("Admin.password")) {
                 done(null, {
                     username,
-                    token: jwt.sign({username}, ldapSecret, {expiresIn: 300})
+                    token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
                 });
                 return;
             }
@@ -66,7 +69,7 @@ export function setup(app :Express) {
         if(username == properties.get("Test.username") && password == properties.get("Test.password")) {
             done(null, {
                 username,
-                token: jwt.sign({username}, ldapSecret, {expiresIn: 300})
+                token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
             });
             return;
         }
@@ -84,7 +87,7 @@ export function setup(app :Express) {
             } else {
                 done(null, {
                     username,
-                    token: jwt.sign({username}, ldapSecret, {expiresIn: 300})
+                    token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
                 });
             }
             ldapClient.unbind();
@@ -132,7 +135,7 @@ export function tryLogin(request :any, response :any) {
 }
 
 
-export function logout(request :any, result :any) {
+export function tryLogout(request :any, result :any) {
     let username = (request.user as any).username;
     request.logout((error :any) => {
         if(error) {
@@ -143,4 +146,26 @@ export function logout(request :any, result :any) {
             result.send({success: true});
         }
     });
+}
+
+
+export function getSessionData(request :Express.Request) {
+    if(!request.user) {
+        request.logout(e => {});
+        return {success: false, expired: false};
+    } else {
+        let token = (request.user as any).token;
+        try {
+            let ret :{success :true, data :any} = {success: true, data: jwt.verify(token, ldapSecret)};
+            return ret;
+        } catch(e) {
+            if(e instanceof jwt.TokenExpiredError) {
+                request.logout(e => {});
+                return {success: false, expired: true};
+            } else {
+                request.logout(e => {});
+                return {success: false, expired: false};
+            }
+        }
+    }
 }

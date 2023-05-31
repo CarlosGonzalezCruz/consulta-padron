@@ -61,11 +61,16 @@ endpoint("/login", "POST", (request, result) => {
 });
 
 endpoint("/logout", "POST", (request, result) => {
-    login.logout(request, result);
+    login.tryLogout(request, result);
 });
 
 endpoint("/inhabitant-data-id", "POST", async (request, result) => {
-    result.json(await inhabitant.generateEntriesFor(request.body.id));
+    let data = login.getSessionData(request);
+    if(!data.success) {
+        result.send({success: false, expired: data.expired});
+    } else {
+        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id)});
+    }
 });
 
 
@@ -77,5 +82,6 @@ async function endpoint(uri :string, rest :"GET" | "POST", callback :(request :a
             break;
         case "POST":
             APP.post(uri, callback);
+            break;
     }
 }
