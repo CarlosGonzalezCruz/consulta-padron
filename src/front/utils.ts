@@ -37,22 +37,24 @@ export function setMsgBoxDismissable(value = true) {
 export function addModalButtonKeybinding() {
     $(document).on("keypress", e => {
         if(e.key == "Enter") {
-            if(msgBoxIsDismissable) {
+            if(msgBoxIsDismissable && $(".modal").is(":visible")) {
                 e.preventDefault();
                 $(".modal:visible input").trigger("blur");
                 $(".modal:visible .modal-footer .btn:last-child").get(0)?.click();
+                return false;
             }
         }
     });
 }
 
 
-export function getSelectedNewbornIds() {
-    let ret :string[] = [];
-    $("#newborns-table-body tr").has(":checkbox:checked").each(function() {
-        ret.push($(this).attr("newborn-id") as string);
+export function playCssAnimationOnce(jQueryElement :JQuery<HTMLElement>, cssClass :string) {
+    return new Promise<void>(resolve => {
+        jQueryElement.addClass(cssClass).one("animationend", function() {
+            $(this).removeClass(cssClass);
+            resolve();
+        });
     })
-    return ret;
 }
 
 
