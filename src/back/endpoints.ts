@@ -56,6 +56,10 @@ endpoint('/query', "GET", (request, result) => {
     result.sendFile("query.html", {root: "web"});
 });
 
+endpoint('/environment-label', "GET", (request, result) => {
+    result.send(properties.get("Application.environment-label", ""));
+});
+
 endpoint("/login", "POST", (request, result) => {
     login.tryLogin(request, result);
 });

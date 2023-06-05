@@ -10,23 +10,27 @@
         <link rel="stylesheet" type="text/css" href="style.css" />
     </head>
     <body class="adjust-to-screen">
-        <div class="container adjust-to-screen h-100 d-flex flex-column justify-content-center">
-            <div class="d-flex flex-column">
-                <div class="rounded border form-group d-flex flex-row p-2">
-                    <div class="d-flex flex-row flex-fill justify-content-center">
-                        <div class="d-flex flex-row mx-2 mx-md-5">
-                            <div class="flex-grow-1"></div>
-                            <label for="inhabitant-id" class="d-block d-md-none col-form-label text-md-right">Nº Id.</label>
-                            <label for="inhabitant-id" class="d-none d-md-block col-form-label text-md-right">Número de Identidad</label>
-                            <div class="mx-2">
-                                <input id="inhabitant-id-field" name="DNI" class="w-100 form-control" placeholder="DNI/NIE">
-                            </div>
-                            <button id="btn-search" class="btn btn-primary">
-                                <img src="icons/search.svg" type="image/svg" class="mr-1 d-inline svg-inverted-color"></svg>
-                                <p class="d-inline">Buscar</p>
+        <div class="container adjust-to-screen h-100 d-flex flex-column">
+            <div class="d-flex flex-row position-absolute justify-content-end">
+                <h4 id="environment-label" class="font-weight-light"></h4>
+            </div>
+            <div class="d-flex flex-column flex-grow-1 justify-content-center">
+                <div class="d-flex flex-column">
+                    <div class="rounded border form-group d-flex flex-row p-2">
+                        <div class="d-flex flex-row flex-fill justify-content-center">
+                            <div class="d-flex flex-row mx-2 mx-md-5">
+                                <div class="flex-grow-1"></div>
+                                <label for="inhabitant-id" class="d-block d-md-none col-form-label text-md-right">Nº Id.</label>
+                                <label for="inhabitant-id" class="d-none d-md-block col-form-label text-md-right">Número de Identidad</label>
+                                <div class="mx-2">
+                                    <input id="inhabitant-id-field" name="DNI" class="w-100 form-control" placeholder="DNI/NIE">
+                                </div>
+                                <button id="btn-search" class="btn btn-primary">
+                                    <img src="icons/search.svg" type="image/svg" class="mr-1 d-inline svg-inverted-color"></svg>
+                                    <p class="d-inline">Buscar</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
                 </div>
                 <div class="d-flex flex-row">
                     <div class=" d-flex flex-column flex-md-row-reverse flex-fill">

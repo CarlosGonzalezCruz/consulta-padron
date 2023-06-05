@@ -2,6 +2,10 @@ import { Result } from "oracledb";
 import * as db from "./db-connection.js"
 
 
+export function openMySQL() {
+    return db.openMySQL();
+}
+
 export function openOracleDB() {
     return db.openOracleDB();
 }
@@ -23,7 +27,7 @@ export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
             LEFT JOIN REPOS.PMH_INSCRIPCION INS ON INS.DBOID = SIT.INSCRIPCION_ID
             LEFT JOIN REPOS.PMH_MOVIMIENTO MOV ON MOV.DBOID = SIT.MOVIMIENTO_ID
             LEFT JOIN REPOS.PMH_VIVIENDA VIV ON VIV.DBOID = SIT.VIVIENDA_ID
-            WHERE HAB.DOC_IDENTIFICADOR = '${idDoc}' AND SIT.ES_ULTIMO = 'T' AND SIT.ES_VIGENTE = 'T'
+            WHERE HAB.DOC_IDENTIFICADOR = '${idDoc}' AND SIT.ES_ULTIMO = 'T'
             FETCH NEXT 1 ROWS ONLY
         `
     );

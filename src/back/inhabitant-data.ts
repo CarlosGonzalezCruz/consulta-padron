@@ -4,6 +4,11 @@ import * as utils from "./utils.js";
 
 const ENTRIES = [
     {
+        displayKey: "Alta en padrón",
+        field: "SIT.ES_VIGENTE",
+        render: (v :'T' | 'F') => utils.writeBoolean(v)
+    },
+    {
         displayKey: "Fecha de alta",
         field: "HAB.ALTA_MUNI_FECHA",
         render: (v :Date) => utils.writeDate(v)

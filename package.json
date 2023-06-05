@@ -30,7 +30,8 @@
     "oracledb": "file:./node-oracledb",
     "passport": "^0.6.0",
     "passport-local": "^1.0.0",
-    "properties-reader": "^2.2.0"
+    "properties-reader": "^2.2.0",
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "@types/bootstrap": "^5.2.6",

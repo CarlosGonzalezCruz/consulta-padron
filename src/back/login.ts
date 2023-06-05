@@ -42,7 +42,7 @@ export function setup(app :Express) {
     }, (username, password, done) => {
 
         if(properties.get("Admin.enabled", true)) {
-            if(username == properties.get("Admin.username") && password == properties.get("Admin.password")) {
+            if(username == properties.get("Admin.username", null) && password == properties.get("Admin.password", null)) {
                 done(null, {
                     username,
                     token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
@@ -50,7 +50,7 @@ export function setup(app :Express) {
                 return;
             }
         }
-        if(username == properties.get("Admin.username")) {
+        if(username == properties.get("Admin.username", null)) {
             done(Error(`El nombre de usuario ${properties.get("Admin.username")} está reservado para el administrador.`), false);
             return;
         }

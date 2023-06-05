@@ -21,6 +21,9 @@ utils.documentReady().then(() => {
         }
     });
 
+
+    updateEnvironmentLabel();
+
     msg.preloadMsgBoxIcons();
     utils.addModalButtonKeybinding();
 });
@@ -28,7 +31,7 @@ utils.documentReady().then(() => {
 
 async function doLogin(entries :{User :FormDataEntryValue | null, Password :FormDataEntryValue | null}) {
     if(!$("#form-login-user").val() || !$("#form-login-password").val()) {
-        msg.displayMessageBox("No deje vacíos los campos de inicio de sesión", 'error');
+        msg.displayMessageBox("No deje vacíos los campos de inicio de sesión.", 'error');
         return;
     }
 
@@ -59,10 +62,8 @@ async function doLogin(entries :{User :FormDataEntryValue | null, Password :Form
 }
 
 
-function updateLoginButton() {
-    if(!!$("#form-login-user").val() && !!$("#form-login-password").val()) {
-        $("#form-login-submit").removeClass("disabled");
-    } else {
-        $("#form-login-submit").addClass("disabled");
-    }
+async function updateEnvironmentLabel() {
+    let fetchRequest = await fetch("/environment-label");
+    let data = await fetchRequest.text();
+    $("#environment-label").text(data);
 }

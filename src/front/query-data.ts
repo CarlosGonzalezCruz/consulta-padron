@@ -67,12 +67,12 @@ async function doLogout() {
             session.end();
             window.location.href = "/login";
         } else {
-            msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión", 'error');
+            msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión.", 'error');
         }
     } catch(e) {
         await utils.concludeAndWait(loadingHandler);
         console.error(`Ha ocurrido un problema al cerrar sesión. Causa: ${e}`);
-        msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión", 'error');
+        msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión.", 'error');
     }
 }
 
@@ -81,11 +81,11 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
     let processedId = dni.processIdDocument(idDoc);
     if(!processedId.valid) {
         if(processedId.error) {
-            msg.displayMessageBox(`Ha ocurrido un error inesperado al procesar el siguiente DNI ó NIE: ${idDoc}`, "error")
+            msg.displayMessageBox(`Ha ocurrido un error inesperado al procesar el siguiente DNI ó NIE: ${idDoc}.`, "error")
         } else {
             if(!!processedId.display) {
                 msg.displayMessageBox(`El siguiente DNI ó NIE no es válido: ${processedId.display}` +
-                (processedId.expectedControl != processedId.control ? `. Se esperaba el carácter de control '${processedId.expectedControl}'` : ""), "error");
+                (processedId.expectedControl != processedId.control ? `. Se esperaba el carácter de control '${processedId.expectedControl}'.` : "."), "error");
             } else {
                 msg.displayMessageBox(`El DNI ó NIE introducido no es válido.`, "error");
             }
@@ -101,10 +101,10 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
         if(!result.success) {
             await utils.concludeAndWait(loadingHandler);
             if(result.expired) {
-                msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo", 'error',
+                msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
                     () => window.location.href = "/login");
             } else {
-                msg.displayMessageBox("La sesión actual no es válida. Por favor, inice sesión de nuevo", 'error',
+                msg.displayMessageBox("La sesión actual no es válida. Por favor, inice sesión de nuevo.", 'error',
                     () => window.location.href = "/login");
             }
             return;
@@ -128,7 +128,7 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
         }
     } catch(e) {
         await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al conectar con el servidor", 'error');
+        msg.displayMessageBox("Ha ocurrido un problema al conectar con el servidor.", 'error');
         throw Error(`Ha ocurrido un problema al conectar con el servidor. Causa: ${e}`);
     }
 }

@@ -15,6 +15,7 @@ utils.setCursorLoadingState(false);
 utils.documentReady().then(() => {
     checkSession();
     focusSearchBar();
+    updateEnvironmentLabel();
 });
 
 function checkSession() {
@@ -28,4 +29,10 @@ function checkSession() {
 function focusSearchBar() {
     $("#inhabitant-id-field").get(0)?.focus();
     $("#inhabitant-id-field").trigger("select");
+}
+
+async function updateEnvironmentLabel() {
+    let fetchRequest = await fetch("/environment-label");
+    let data = await fetchRequest.text();
+    $("#environment-label").text(data);
 }
