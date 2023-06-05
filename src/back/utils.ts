@@ -40,7 +40,7 @@ export function writeDate(date :Date) {
 }
 
 
-export function writeBoolean(value :Boolean | 'T' | 'F' | null) {
+export function writeBoolean(value :Boolean | DBBinary | null) {
     if(value == null) {
         return null;
     } else {

@@ -1,12 +1,13 @@
 import * as db from "./db-queries.js";
 import * as utils from "./utils.js";
 
+db.openMySQL();
 
 const ENTRIES = [
     {
         displayKey: "Alta en padrón",
         field: "SIT.ES_VIGENTE",
-        render: (v :'T' | 'F') => utils.writeBoolean(v)
+        render: (v :DBBinary) => utils.writeBoolean(v)
     },
     {
         displayKey: "Fecha de alta",
@@ -55,12 +56,12 @@ const ENTRIES = [
     {
         displayKey: "Protegid@",
         field: "HAB.ES_PROTEGIDO",
-        render: (v :'T' | 'F' | null) => utils.writeBoolean(v)
+        render: (v :DBBinary | null) => utils.writeBoolean(v)
     },
     {
         displayKey: "Paralizad@",
         field: "HAB.ES_PARALIZADO",
-        render: (v :'T' | 'F' | null) => utils.writeBoolean(v)
+        render: (v :DBBinary | null) => utils.writeBoolean(v)
     },
     {
         displayKey: "Nombre fonético",

@@ -6,6 +6,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import SQLiteStoreFactory from "connect-sqlite3";
 import jwt from "jsonwebtoken";
+import * as permissions from "./permissions.js";
 import * as properties from "./properties.js";
 import * as utils from "./utils.js";
 
@@ -43,10 +44,12 @@ export function setup(app :Express) {
 
         if(properties.get("Admin.enabled", true)) {
             if(username == properties.get("Admin.username", null) && password == properties.get("Admin.password", null)) {
-                done(null, {
-                    username,
-                    token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
-                });
+                permissions.identify(username).then(user => {
+                    done(null, {
+                        username,
+                        token: jwt.sign({user: user.username, isAdmin: true}, ldapSecret, {expiresIn: ldapTimeout})
+                    });
+                })
                 return;
             }
         }
@@ -54,10 +57,12 @@ export function setup(app :Express) {
             done(Error(`El nombre de usuario ${properties.get("Admin.username")} está reservado para el administrador.`), false);
             return;
         }
-        if(username == properties.get("Test.username") && password == properties.get("Test.password")) {
-            done(null, {
-                username,
-                token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
+        if(username == properties.get("Test.username", null) && password == properties.get("Test.password", null)) {
+            permissions.identify(username).then(user => {
+                done(null, {
+                    username,
+                    token: jwt.sign({username: user.username, isAdmin: user.isAdmin == 'T'}, ldapSecret, {expiresIn: ldapTimeout})
+                });
             });
             return;
         }
@@ -74,9 +79,11 @@ export function setup(app :Express) {
                 console.error(`La autenticación ha fallado. Causa: ${error}`);
                 done(error, false);
             } else {
-                done(null, {
-                    username,
-                    token: jwt.sign({username}, ldapSecret, {expiresIn: ldapTimeout})
+                permissions.identify(username).then(user => {
+                    done(null, {
+                        username,
+                        token: jwt.sign({username: user.username, isAdmin: user.isAdmin == 'T'}, ldapSecret, {expiresIn: ldapTimeout})
+                    });
                 });
             }
             ldapClient.unbind();
@@ -142,7 +149,8 @@ export function tryLogout(request :any, result :any) {
 export function getSessionData(request :Express.Request) {
     if(!request.user) {
         request.logout(e => {});
-        return {success: false, expired: false};
+        let ret :{success :false, expired :boolean} = {success: false, expired: false};
+        return ret;
     } else {
         let token = (request.user as any).token;
         try {
@@ -151,10 +159,12 @@ export function getSessionData(request :Express.Request) {
         } catch(e) {
             if(e instanceof jwt.TokenExpiredError) {
                 request.logout(e => {});
-                return {success: false, expired: true};
+                let ret :{success :false, expired :boolean} = {success: false, expired: false};
+                return ret;
             } else {
                 request.logout(e => {});
-                return {success: false, expired: false};
+                let ret :{success :false, expired :boolean} = {success: false, expired: false};
+                return ret;
             }
         }
     }

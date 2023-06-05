@@ -99,7 +99,6 @@ export async function performQueryMySQL(query :string, updateMetaResults = false
             } else {
                 if(updateMetaResults) {
                     sqliteLastRowCount = result.affectedRows;
-                    console.info(`Last row count updated to ${sqliteLastRowCount}`)
                     sqliteLastInsertedId = result.insertId;
                 }
                 resolve(result);
@@ -167,7 +166,16 @@ async function initTables() {
             try {
                 await performQueryMySQL(`
                     CREATE TABLE ${rolesTable} (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT,
+                        isDefault VARCHAR(1) NOT NULL DEFAULT 'F',
+                        isAdmin VARCHAR(1) NOT NULL DEFAULT 'F',
+                        parent INTEGER,
+                        entries BLOB,
+                        CHECK(isDefault IN ('T', 'F')),
+                        CHECK(isAdmin IN ('T', 'F')),
+                        FOREIGN KEY(parent)
+                            REFERENCES ${rolesTable}(id)
                     );
                 `);
                 console.log(`Tabla ${rolesTable} creada en MySQL.`);
@@ -179,7 +187,10 @@ async function initTables() {
             try {
                 await performQueryMySQL(`
                     CREATE TABLE ${usersTable} (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT
+                        username TEXT PRIMARY KEY,
+                        role INTEGER,
+                        FOREIGN KEY(role)
+                            REFERENCES ${rolesTable}(id)
                     );
                 `);
                 console.log(`Tabla ${usersTable} creada en MySQL.`);

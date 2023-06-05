@@ -43,6 +43,9 @@ export async function enableTabs() {
 export async function enableSessionLinks() {
     await utils.documentReady();
 
+    if(await isCurrentUserAdmin()) {
+        $("#admin-link").removeClass("d-none");
+    }
     $("#session-logout").on("click", () => {
         doLogout();
     });
@@ -145,6 +148,17 @@ async function fetchInhabitantDataByNationalId(id :string) {
     let fetchResult = await fetch("/inhabitant-data-id", fetchInit);
     let data = await fetchResult.json();
     return data;
+}
+
+
+async function isCurrentUserAdmin() {
+    let fetchResult = await fetch("/am-i-admin", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include"
+    });
+    let data = await fetchResult.json();
+    return !!data.admin;
 }
 
 

@@ -68,6 +68,15 @@ endpoint("/logout", "POST", (request, result) => {
     login.tryLogout(request, result);
 });
 
+endpoint("/am-i-admin", "POST", (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success) {
+        result.send({admin: false});
+    } else {
+        result.send({admin: data.data.isAdmin});
+    }
+})
+
 endpoint("/inhabitant-data-id", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success) {
