@@ -138,6 +138,20 @@
     font-size: small;
 }
 
+.not-allowed-indicator {
+    background-color: rgb(248, 229, 218);
+    border-radius: 5px;
+    display: inline-block;
+    width: 15em !important;
+    text-align: center;
+    color: rgb(129, 112, 101);
+    font-size: small;
+}
+
+.missing-full-name {
+    color: gray;
+}
+
 .login-title {
     color: rgb(196, 196, 196);
     font-variant: small-caps;

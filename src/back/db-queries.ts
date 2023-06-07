@@ -1,5 +1,6 @@
 import { Result } from "oracledb";
 import * as db from "./db-connection.js"
+import * as utils from "./utils.js";
 
 
 export function openMySQL() {
@@ -20,9 +21,12 @@ export function closeAll() {
 
 
 export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
+    if(fields.length == 0) {
+        return [];
+    }
     let result = await db.performQueryOracleDB(
         `
-            SELECT NOMBRE_COMPLETO,${fields.join(",")} FROM REPOS.PMH_SIT_HABITANTE SIT
+            SELECT ${fields.join(",")} FROM REPOS.PMH_SIT_HABITANTE SIT
             LEFT JOIN REPOS.PMH_HABITANTE HAB ON HAB.DBOID = SIT.HABITANTE_ID
             LEFT JOIN REPOS.PMH_INSCRIPCION INS ON INS.DBOID = SIT.INSCRIPCION_ID
             LEFT JOIN REPOS.PMH_MOVIMIENTO MOV ON MOV.DBOID = SIT.MOVIMIENTO_ID
@@ -51,10 +55,7 @@ export async function getAcademicLevelDescription(id :number) {
 }
 
 
-function mapOracleDBResult<T>(result :Result<T> | null) {
-    if(result == null) {
-        return null;
-    }
+function mapOracleDBResult<T>(result :Result<T>) {
     let ret :any[] = [];
     for(let row of result.rows!) {
         let rowMap :any = {};
@@ -133,12 +134,13 @@ export async function createUser(username :string, roleId :number) {
 }
 
 
-export async function createRole(name :string) {
+export async function createRole(name :string, initialPermissions :any) {
     try {
         let isFirstRole = await getRoleCount();
+        let permissions = utils.jsonToBuffer(initialPermissions);
         await db.performQueryMySQL(`
-            INSERT INTO ${db.profileTable("ROLES")}(name, isDefault, isAdmin)
-            VALUES ('${name}', '${isFirstRole ? 'T' : 'F'}', 'F');
+            INSERT INTO ${db.profileTable("ROLES")}(name, isDefault, isAdmin, entries)
+            VALUES ('${name}', '${isFirstRole ? 'T' : 'F'}', 'F', '${permissions}');
         `, true);
         console.log(`Creado rol ${name}`);
     } catch(e) {

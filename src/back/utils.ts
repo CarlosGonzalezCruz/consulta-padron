@@ -63,8 +63,21 @@ export function ensureNotNull<T>(value :T | null | undefined) : value is T {
 }
 
 
-export async function asyncArrayMap<T, U>(array :T[], conversionFn :(value :T) => Promise<U>) {
-    return Promise.all(array.map(async v => await conversionFn(v)));
+Array.prototype.asyncMap = function<T, U>(fn :(value :T) => Promise<U>) {
+    return Promise.all(this.map(async (v :T) => await fn(v)));
+}
+
+Array.prototype.contains = function<T>(o :T) {
+    return this.indexOf(o) != -1;
+}
+
+
+export function jsonToBuffer(obj :any) {
+    return Buffer.from(JSON.stringify(obj), 'utf8').toString();
+}
+
+export function bufferToJson(buffer :string) {
+    return JSON.parse(Buffer.from(buffer).toString('utf8'));
 }
 
 

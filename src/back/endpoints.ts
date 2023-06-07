@@ -3,6 +3,7 @@ import https from "https";
 import express from "express";
 import * as inhabitant from "./inhabitant-data.js"
 import * as properties from "./properties.js";
+import * as permissions from "./permissions.js";
 import * as login from "./login.js";
 import * as utils from "./utils.js";
 
@@ -80,9 +81,11 @@ endpoint("/am-i-admin", "POST", (request, result) => {
 endpoint("/inhabitant-data-id", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success) {
-        result.send({success: false, expired: data.expired});
+        result.send({success: false, expired: data.expired, unauthorized: false});
     } else {
-        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id)});
+        let userRole = await permissions.identify(data.data.username);
+        let allowedEntries = await permissions.getEffectivePermissions(userRole);
+        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id, allowedEntries)});
     }
 });
 

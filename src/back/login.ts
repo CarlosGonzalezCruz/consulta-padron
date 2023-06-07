@@ -149,21 +149,21 @@ export function tryLogout(request :any, result :any) {
 export function getSessionData(request :Express.Request) {
     if(!request.user) {
         request.logout(e => {});
-        let ret :{success :false, expired :boolean} = {success: false, expired: false};
+        let ret = {success: false as const, expired: false};
         return ret;
     } else {
         let token = (request.user as any).token;
         try {
-            let ret :{success :true, data :any} = {success: true, data: jwt.verify(token, ldapSecret)};
+            let ret = {success: true as const, data: (jwt.verify(token, ldapSecret) as any)};
             return ret;
         } catch(e) {
             if(e instanceof jwt.TokenExpiredError) {
                 request.logout(e => {});
-                let ret :{success :false, expired :boolean} = {success: false, expired: false};
+                let ret = {success: false as const, expired: false};
                 return ret;
             } else {
                 request.logout(e => {});
-                let ret :{success :false, expired :boolean} = {success: false, expired: false};
+                let ret = {success: false as const, expired: false};
                 return ret;
             }
         }

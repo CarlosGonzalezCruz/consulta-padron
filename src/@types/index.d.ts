@@ -1,4 +1,11 @@
 
+
+interface Array<T> {
+    contains(o :T) :boolean;
+    asyncMap<U>(fn :(value :T) => Promise<U>) :Promise<Awaited<U>[]>;
+}
+
+
 declare type DBBinary = 'T' | 'F';
 
 declare type User = {
@@ -12,5 +19,5 @@ declare type Role = {
     isDefault :DBBinary,
     isAdmin :DBBinary,
     parent :number,
-    entries :null
+    entries :string
 }
