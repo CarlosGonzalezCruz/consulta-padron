@@ -3,12 +3,34 @@ import * as utils from "./utils.js";
 
 
 export async function identify(username :string) {
-    let result = await db.getUserRole(username);
+    let result = await db.getUserRoleByUsername(username);
     if(result == null) {
         await db.createUser(username, (await getDefaultRole()).id);
-        result = await db.getUserRole(username);
+        result = await db.getUserRoleByUsername(username);
     }
     return result!;
+}
+
+
+export async function findAuxAdmin(adminUsername :string = "admin") {
+    let result = await db.getAuxAdmin();
+    if(result == null) {
+        try {
+            await db.createUser(adminUsername, (await getDefaultRole()).id);
+            result = await db.getUserByUsername(adminUsername);
+            db.setAuxiliar(result!.id);
+        } catch(e) {
+            console.error(`No se ha podido crear cuenta auxiliar para el administrador. Causa: ${e}`);
+            return {success: false as const, failedRename: false};
+        }
+    } else if(result.username != adminUsername) {
+        let { success } = await db.updateUserUsername(result.id, adminUsername);
+        if(!success) {
+            console.error(`Se ha intentado renombrar la cuenta ${result.username} a "${adminUsername}" y no se ha podido.`);
+            return {success: false as const, failedRename: true};
+        }
+    }
+    return {success: true as const, data: result!};
 }
 
 

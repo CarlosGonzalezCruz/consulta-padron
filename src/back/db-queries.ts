@@ -70,11 +70,35 @@ function mapOracleDBResult<T>(result :Result<T>) {
 }
 
 
-export async function getUser(username :string) {
+export async function getAuxAdmin() {
+    let result = await db.performQueryMySQL(`
+        SELECT * FROM ${db.profileTable("USERS")} WHERE isAuxiliar='T';
+    `) as User[];
+    return result.length > 0 ? result[0] : null;
+}
+
+
+export async function getUser(id :number) {
+    let result = await db.performQueryMySQL(`
+        SELECT * FROM ${db.profileTable("USERS")} WHERE id='${id}';
+    `) as User[];
+    return result.length > 0 ? result[0] : null;
+}
+
+
+export async function getUserByUsername(username :string) {
     let result = await db.performQueryMySQL(`
         SELECT * FROM ${db.profileTable("USERS")} WHERE username='${username}';
     `) as User[];
     return result.length > 0 ? result[0] : null;
+}
+
+
+export async function getAllUsers() {
+    let result = await db.performQueryMySQL(`
+        SELECT id, username FROM ${db.profileTable("USERS")} ORDER BY username;
+    `) as {id :number, username :string}[];
+    return result;
 }
 
 
@@ -104,7 +128,27 @@ export async function setDefaultRole(roleId :number) {
 }
 
 
-export async function getUserRole(username :string) {
+export async function setAuxiliar(userId :number) {
+    await db.performQueryMySQL(`
+        UPDATE ${db.profileTable("USERS")} SET isAuxiliar='F' WHERE isAuxiliar='T';
+    `);
+    await db.performQueryMySQL(`
+        UPDATE ${db.profileTable("USERS")} SET isAuxiliar='T' WHERE id=${userId};
+    `);
+}
+
+
+export async function getUserRole(id :number) {
+    let result = await db.performQueryMySQL(`
+        SELECT * FROM ${db.profileTable("USERS")} U
+        LEFT JOIN ${db.profileTable("ROLES")} R ON U.role=R.id
+        WHERE U.id='${id}';
+    `) as (User & Role)[];
+    return result.length > 0 ? result[0] : null;
+}
+
+
+export async function getUserRoleByUsername(username :string) {
     let result = await db.performQueryMySQL(`
         SELECT * FROM ${db.profileTable("USERS")} U
         LEFT JOIN ${db.profileTable("ROLES")} R ON U.role=R.id
@@ -130,6 +174,32 @@ export async function createUser(username :string, roleId :number) {
         console.log(`Creado usuario para ${username}`);
     } catch(e) {
         console.error(`Ha ocurrido un problema al crear el usuario. Causa: ${e}`);
+    }
+}
+
+
+export async function deleteUser(id :number) {
+    try {
+        await db.performQueryMySQL(`
+            DELETE FROM ${db.profileTable("USERS")} WHERE id=${id};
+        `, true);
+        console.log(`Eliminado usuario con id ${id}`);
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al eliminar el usuario. Causa: ${e}`);
+    }
+}
+
+
+export async function updateUserUsername(id :number, newName :string) {
+    try {
+        let result = await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("USERS")} SET username='${newName}' WHERE id=${id};
+        `, true);
+        console.log(`Cambiado usuario ${id} a ${newName}`);
+        return {success: true as const};
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al cambiar el nombre el usuario. Causa: ${e}`);
+        return {success: false as const};
     }
 }
 

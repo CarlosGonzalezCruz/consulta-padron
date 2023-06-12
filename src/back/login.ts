@@ -44,17 +44,24 @@ export function setup(app :Express) {
 
         if(properties.get("Admin.enabled", true)) {
             if(username == properties.get("Admin.username", null) && password == properties.get("Admin.password", null)) {
-                permissions.identify(username).then(user => {
-                    done(null, {
-                        username,
-                        token: jwt.sign({user: user.username, isAdmin: true}, ldapSecret, {expiresIn: ldapTimeout})
-                    });
+                permissions.findAuxAdmin(properties.get<string>("Admin.username")).then(result => {
+                    if(result.success) {
+                        done(null, {
+                            username,
+                            token: jwt.sign({user: result.data.username, isAdmin: true}, ldapSecret, {expiresIn: ldapTimeout})
+                        });
+                    } else if(result.failedRename) {
+                        done(Error(`El nuevo nombre del administrador, "${properties.get("Admin.username")}", ya está en uso para otro usuario.`
+                            + " Cámbielo para poder utilizar la cuenta auxiliar de administrador."), false);
+                    } else {
+                        done(Error(`Ha ocurrido un error inesperado con la cuenta auxiliar del administrador.`), false);
+                    }
                 })
                 return;
             }
         }
         if(username == properties.get("Admin.username", null)) {
-            done(Error(`El nombre de usuario ${properties.get("Admin.username")} está reservado para el administrador.`), false);
+            done(Error(`El nombre de usuario "${properties.get("Admin.username")}" está reservado para el administrador.`), false);
             return;
         }
         if(username == properties.get("Test.username", null) && password == properties.get("Test.password", null)) {

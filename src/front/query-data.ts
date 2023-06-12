@@ -45,6 +45,9 @@ export async function enableSessionLinks() {
 
     if(await isCurrentUserAdmin()) {
         $("#admin-link").removeClass("d-none");
+        $("#admin-link").on("click", () => {
+            window.location.href = "/admin";
+        });
     }
     $("#session-logout").on("click", () => {
         doLogout();
@@ -52,7 +55,7 @@ export async function enableSessionLinks() {
 }
 
 
-async function doLogout() {
+export async function doLogout() {
     if(!session.exists()) {
         return;
     }
@@ -75,7 +78,7 @@ async function doLogout() {
     } catch(e) {
         await utils.concludeAndWait(loadingHandler);
         console.error(`Ha ocurrido un problema al cerrar sesión. Causa: ${e}`);
-        msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión.", 'error');
+        window.location.href = "/login";
     }
 }
 

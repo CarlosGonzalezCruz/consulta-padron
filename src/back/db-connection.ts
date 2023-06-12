@@ -187,8 +187,11 @@ async function initTables() {
             try {
                 await performQueryMySQL(`
                     CREATE TABLE ${usersTable} (
-                        username TEXT PRIMARY KEY,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE,
                         role INTEGER,
+                        isAuxiliar VARCHAR(1) NOT NULL DEFAULT 'F',
+                        CHECK(isAuxiliar IN ('T', 'F'))
                         FOREIGN KEY(role)
                             REFERENCES ${rolesTable}(id)
                     );

@@ -49,9 +49,11 @@ async function doLogin(entries :{User :FormDataEntryValue | null, Password :Form
         if(data.success) {
             session.start({username: data.user.username, token: data.user.token});
             window.location.href = "/query";
-        } else {
+        } else if(data.message == "Invalid Credentials") {
             $("#form-login .login-error").removeClass("d-none");
             utils.playCssAnimationOnce($("#form-login .login-error"), "fade-in");
+        } else {
+            msg.displayMessageBox(data.message, 'error');
         }
 
     } catch(e) {

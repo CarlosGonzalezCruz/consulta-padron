@@ -9,6 +9,7 @@ interface Array<T> {
 declare type DBBinary = 'T' | 'F';
 
 declare type User = {
+    id :number,
     username :string,
     role :number
 }

@@ -4,6 +4,7 @@ import express from "express";
 import * as inhabitant from "./inhabitant-data.js"
 import * as properties from "./properties.js";
 import * as permissions from "./permissions.js";
+import * as db from "./db-queries.js";
 import * as login from "./login.js";
 import * as utils from "./utils.js";
 
@@ -57,6 +58,10 @@ endpoint('/query', "GET", (request, result) => {
     result.sendFile("query.html", {root: "web"});
 });
 
+endpoint('/admin', "GET", (request, result) => {
+    result.sendFile("admin.html", {root: "web"});
+});
+
 endpoint('/environment-label', "GET", (request, result) => {
     result.send(properties.get("Application.environment-label", ""));
 });
@@ -89,8 +94,54 @@ endpoint("/inhabitant-data-id", "POST", async (request, result) => {
     }
 });
 
+endpoint("/admin/all-users", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getAllUsers()});
+    }
+});
 
-async function endpoint(uri :string, rest :"GET" | "POST", callback :(request :any, result :any) => any) {
+endpoint("/admin/user", "POST", async(request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getUserRole(request.body.userId)});
+    }
+});
+
+endpoint("/admin/user-update-username", "POST", async(request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, duplicate: false, reserved: false});
+    } else {
+        if(request.body.newName == properties.get("Admin.username", null)) {
+            result.send({success: false, duplicate: false, reserved: true});
+            return;
+        }
+        let oldUser = await db.getUserByUsername(request.body.newName);
+        if(oldUser != null) {
+            result.send({success: false, duplicate: true, reserved: false});
+            return;
+        }
+        await db.updateUserUsername(request.body.userId, request.body.newName);
+        result.send({success: true, data: await db.getUser(request.body.userId)});
+    }
+});
+
+endpoint("/admin/user", "DELETE", async(request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        db.deleteUser(request.body.userId);
+        result.send({success: true});
+    }
+});
+
+async function endpoint(uri :string, rest :"GET" | "POST" | "DELETE", callback :(request :any, result :any) => any) {
     await utils.passportReady();
     switch(rest) {
         case "GET":
@@ -98,6 +149,9 @@ async function endpoint(uri :string, rest :"GET" | "POST", callback :(request :a
             break;
         case "POST":
             APP.post(uri, callback);
+            break;
+        case "DELETE":
+            APP.delete(uri, callback);
             break;
     }
 }
