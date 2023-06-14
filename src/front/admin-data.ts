@@ -2,19 +2,25 @@ import * as query from "./query-data.js";
 import * as msg from "./message-box.js";
 import * as utils from "./utils.js";
 
+const SEARCH_TIMEOUT_MS = 300;
 
 let selectedUser :number | null = null;
 let selectedUsername :string = "";
 
+let listFilter :string = "";
+let searchTimeout :NodeJS.Timeout | null = null;
 
-export function enableButtons() {
+export async function enableButtons() {
+    await utils.documentReady();
+
+    $("#user-button-create").on("click", () => {
+        focusModalInputField($("#modal-create-user"));
+        $("#modal-create-user").modal("show");
+    });
     $("#user-field-username-edit").on("click", () => {
         $("#modal-update-username-selected-username").text(selectedUsername);
         $("#modal-update-username-input-field").val(selectedUsername);
-        $("#modal-update-username").one("shown.bs.modal", () => {
-            $("#modal-update-username-input-field").get(0)?.focus();
-            $("#modal-update-username-input-field").trigger("select");
-        });
+        focusModalInputField($("#modal-update-username"));
         $("#modal-update-username").modal("show");
     });
     $("#user-button-delete").on("click", function() {
@@ -24,12 +30,26 @@ export function enableButtons() {
         $("#modal-delete-user-selected-username").text(selectedUsername);
         $("#modal-delete-user").modal("show");
     });
-    $("#modal-update-username-confirm").on("click", async () => {
-        await renameSelectedUser();
-    })
+
+    bindModalSubmitToInput($("#modal-create-user-input-field"), $("#modal-create-user-confirm"));
+    bindModalSubmitToInput($("#modal-update-username-input-field"), $("#modal-update-username-confirm"));
+
+    $("#modal-create-user-confirm").on("click", async function() {
+        if(!$(this).is(".disabled")) {
+            $("#modal-create-user").modal("hide");
+            await createNewUser();
+        }
+    });
+    $("#modal-update-username-confirm").on("click", async function() {
+        if(!$(this).is(".disabled")) {
+            $("#modal-update-username").modal("hide");
+            await renameSelectedUser();
+        }
+    });
     $("#modal-delete-user-confirm").on("click", async () => {
         await deleteSelectedUser();
-    })
+    });
+    enableSearch();
 }
 
 
@@ -48,6 +68,9 @@ export async function populateUsersTable() {
     const TABLE = $("#user-role-list");
     TABLE.empty();
     for(let user of usersData) {
+        if(!entryMatchesFilter(user.username)) {
+            continue;
+        }
         let row = $("<tr>");
         let element = $("<td>");
         element.attr("user-id", user.id);
@@ -55,6 +78,15 @@ export async function populateUsersTable() {
         assignUserItemClickEvent(element);
         row.append(element);
         TABLE.append(row);
+    }
+}
+
+
+function entryMatchesFilter(entry :string) {
+    if(!listFilter) {
+        return true;
+    } else {
+        return entry.includes(listFilter);
     }
 }
 
@@ -115,6 +147,55 @@ function updateDetailsScreenForAuxAdmin(isAuxAdmin :boolean) {
 }
 
 
+function focusModalInputField(modal :JQuery) {
+    modal.one("shown.bs.modal", () => {
+        modal.find("input[type='text']").get(0)?.focus();
+        modal.find("input[type='text']").trigger("select");
+    });
+}
+
+
+function bindModalSubmitToInput(inputField :JQuery, submitButton :JQuery) {
+    inputField.on("input", function() {
+        if(!$(this).val()) {
+            submitButton.addClass("disabled");
+        } else {
+            submitButton.removeClass("disabled");
+        }
+    });
+    if(!inputField.val()) {
+        submitButton.addClass("disabled");
+    } else {
+        submitButton.removeClass("disabled");
+    }
+}
+
+
+async function selectUser(userId :number | null) {
+    selectedUser = userId;
+    await Promise.all([
+        updateDetailsScreen(),
+        populateUsersTable()
+    ]); 
+    updateSelectedItem();
+}
+
+
+function enableSearch() {
+    $("#search-field").on("input", function() {
+        if(!!searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        searchTimeout = setTimeout(async () => {
+            listFilter = $(this).val() as string;
+            await populateUsersTable();
+            updateSelectedItem();
+            searchTimeout = null;
+        }, SEARCH_TIMEOUT_MS);
+    });
+}
+
+
 async function fetchAllUsers() {
     let loadingHandler = msg.displayLoadingBox("Obteniendo usuarios...");
     try {
@@ -168,9 +249,49 @@ async function fetchUser(id :number) {
 }
 
 
+async function createNewUser() {
+    let username = $("#modal-create-user-input-field").val();
+    if(!$("#modal-create-user-input-field").val()) {
+        msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
+        return;
+    }
+
+    let loadingHandler = msg.displayLoadingBox("Creando nuevo usuario...");
+    try {
+        let fetchRequest = await fetch("/admin/user", {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                username
+            }),
+            credentials: "include"
+        });
+        let data = await fetchRequest.json();
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            msg.displayMessageBox(`Se ha creado una cuenta para el usuario ${data.user.username}.`, 'success');
+            selectUser(data.user.id);
+        } else if(data.duplicate) {
+            msg.displayMessageBox(`El nombre de usuario introducido ya está en uso para otro usuario.`, 'error');
+            selectUser(data.id);
+        } else {
+            msg.displayMessageBox(`No se ha podido crear la cuenta de usuario.`, 'error');
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al crear la cuenta de usuario.", 'error');
+        console.error(`Ha ocurrido un problema al crear la cuenta de usuario. Causa: ${e}`);
+    }
+}
+
+
 async function renameSelectedUser() {
     if(selectedUser == null) {
-        console.error("No hay usuario seleccionado. No se actualizará nada.");
+        msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
+        return;
+    }
+    if(!$("#modal-update-username-input-field").val()) {
+        console.error("El nombre de usuario no puede quedar vacío.");
         return;
     }
     if(selectedUsername == $("#modal-update-username-input-field").val()) {
@@ -191,12 +312,7 @@ async function renameSelectedUser() {
         let data = await fetchRequest.json();
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
-            selectedUsername = data.username;
-            await Promise.all([
-                updateDetailsScreen(),
-                populateUsersTable()
-            ]); 
-            updateSelectedItem();
+            selectUser(selectedUser);
         } else if(data.reserved) {
             msg.displayMessageBox("El nombre de usuario introducido está reservado para el servidor. Elija otro o modifique las propiedades del servidor.", 'error');
         } else if(data.duplicate) {
@@ -231,13 +347,7 @@ async function deleteSelectedUser() {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             msg.displayMessageBox("Se ha eliminado los datos del usuario correctamente.", 'success');
-            selectedUser = null;
-            selectedUsername = "";
-            await Promise.all([
-                updateDetailsScreen(),
-                populateUsersTable()
-            ]); 
-            updateSelectedItem();
+            selectUser(null);
         } else {
             msg.displayMessageBox("No se ha podido eliminar los datos del usuario.", 'error');
         }

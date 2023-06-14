@@ -23,11 +23,16 @@
                     <div class=" d-flex flex-column flex-md-row-reverse flex-fill">
                         <div class="d-flex flex-column flex-md-row w-md-80 min-vh-50">
                             <div id="user-role-list-container" class="d-flex flex-column flex-fill flex-md-grow-0 fixed-w-md-200 fixed-w-lg-300 rounded border mb-2 mb-md-0 mr-md-3 p-3">
+                                <input id="search-field" class="form-control mb-1" placeholder="Buscar...">
                                 <div class="h-0 overflow-y flex-fill">
                                     <table id="user-role-list" class="w-100 table table-sm h-0 w-50">
                                         <!-- Will be filled in runtime -->
                                     </table>
                                 </div>
+                                <button id="user-button-create" class="btn btn-success">
+                                    <img src="icons/person-fill-add.svg" class="svg-inverted-color img-fluid">
+                                    Añadir usuario
+                                </button>
                             </div>
                             <div id="user-role-details-container" class="d-flex flex-column flex-fill rounded border mb-2 mb-md-0 p-1">
                                 <div id="default-user-placeholder" class="placeholder d-flex flex-column flex-fill justify-content-center align-items-center">
@@ -36,36 +41,37 @@
                                         Seleccione un usuario de la lista.
                                     </h5>
                                 </div>
-                                <div id="user-details-panel" class="d-none flex-column flex-fill justify-content-around align-items-center p-3">
-                                    <div id="user-details-aux-admin-warning" class="d-none row w-100">
-                                        <small class="gray-text">
-                                            Esta cuenta es auxiliar y no se puede modificar desde aquí. Cambie el perfil del servidor y reinícielo
-                                            para aplicar los cambios.
-                                        </small>
-                                    </div>
-                                    <div class="row w-100 px-2">
-                                        <div class="col-5">
-                                            <b>Usuario de LDAP</b>
+                                <div id="user-details-panel" class="d-none flex-column flex-fill p-3">
+                                    <div class="d-flex flex-column flex-fill justify-content-around align-items-center overflow-y">
+                                        <div class="row w-100 px-2">
+                                            <div class="col-5">
+                                                <b>Usuario de LDAP</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="user-field-username"></span>
+                                                <img id="user-field-username-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div id="user-details-aux-admin-warning" class="d-none">
+                                                <small class="login-error">
+                                                    Esta cuenta es auxiliar y no se puede modificar desde aquí. Cambie el perfil del servidor y reinícielo
+                                                    para aplicar los cambios.
+                                                </small>
+                                            </div>
                                         </div>
-                                        <div class="col-5">
-                                            <span id="user-field-username"></span>
-                                            <img id="user-field-username-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
-                                        </div>
-                                        
-                                    </div>
-                                    <div class="row w-100 px-2">
-                                        <div class="col-5">
-                                            <b>Rol</b>
-                                        </div>
-                                        <div class="col-5">
-                                            <span id="user-field-role"></span>
-                                            <img id="user-field-role-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
-                                        </div>
-                                        <div class="d-block w-100">
-                                            <small class="gray-text">
-                                                El rol determina las entradas que el usuario puede ver, así como si puede acceder al panel
-                                                de administración.
-                                            </small>
+                                        <div class="row w-100 px-2">
+                                            <div class="col-5">
+                                                <b>Rol</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="user-field-role"></span>
+                                                <img id="user-field-role-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="d-block w-100">
+                                                <small class="gray-text">
+                                                    El rol determina las entradas que el usuario puede ver, así como si puede acceder al panel
+                                                    de administración.
+                                                </small>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="row w-100 px-2 align-right">
@@ -123,12 +129,32 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <div class="btn btn-primary" data-dismiss="modal">Aceptar</div>
+                        <button class="btn btn-primary" data-dismiss="modal">Aceptar</div>
                     </div>
                 </div>
             </div>
             <div id="modal-preloaded-icons" hidden>
                 <!-- Will be filled in runtime -->
+            </div>
+        </div>
+        <div id="modal-create-user" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Añadir usuario</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Introduzca el nombre LDAP del nuevo usuario</b>:</p>
+                        <input id="modal-create-user-input-field" type="text" class="form-control w-100" placeholder="Nombre de usuario">
+                        <small class="gray-text">
+                            El nombre introducido aquí debe coincidir exactamente con el nombre provisto por LDAP para el usuario que corresponda.
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-create-user-confirm" class="btn btn-success">Añadir</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="modal-update-username" class="modal fade" role="dialog">
@@ -145,8 +171,8 @@
                         </small>
                     </div>
                     <div class="modal-footer">
-                        <div class="btn btn-secondary" data-dismiss="modal">Cancelar</div>
-                        <div id="modal-update-username-confirm" class="btn btn-primary" data-dismiss="modal">Aceptar</div>
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-update-username-confirm" class="btn btn-primary">Aceptar</button>
                     </div>
                 </div>
             </div>

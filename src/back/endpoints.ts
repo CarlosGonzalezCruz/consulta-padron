@@ -131,7 +131,27 @@ endpoint("/admin/user-update-username", "POST", async(request, result) => {
     }
 });
 
-endpoint("/admin/user", "DELETE", async(request, result) => {
+endpoint("/admin/user", "PUT", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, duplicate: false});
+    } else {
+        let existingUser = await db.getUserByUsername(request.body.username);
+        if(existingUser != null) {
+            result.send({success: false, duplicate: true, id: existingUser.id});
+            return;
+        }
+        try {
+            await db.createUser(request.body.username, (await db.getDefaultRole())!.id);
+            let newUser = await db.getUserByUsername(request.body.username);
+            result.send({success: true, user: newUser});
+        } catch(e) {
+            result.send({success: false, duplicate: false});
+        }
+    }
+});
+
+endpoint("/admin/user", "DELETE", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
@@ -141,11 +161,14 @@ endpoint("/admin/user", "DELETE", async(request, result) => {
     }
 });
 
-async function endpoint(uri :string, rest :"GET" | "POST" | "DELETE", callback :(request :any, result :any) => any) {
+async function endpoint(uri :string, rest :"GET" | "PUT" | "POST" | "DELETE", callback :(request :any, result :any) => any) {
     await utils.passportReady();
     switch(rest) {
         case "GET":
             APP.get(uri, callback);
+            break;
+        case "PUT":
+            APP.put(uri, callback);
             break;
         case "POST":
             APP.post(uri, callback);
