@@ -72,3 +72,12 @@ export function enforceDigits(value :string | number, minDigits :number) {
     }
     return "0".repeat(Math.max(minDigits - value.length, 0)) + value;
 }
+
+
+export function writeBoolean(value :Boolean | DBBinary | null) {
+    if(value == null) {
+        return null;
+    } else {
+        return (value == true || value == 'T') ? "Sí" : "No";
+    }
+}

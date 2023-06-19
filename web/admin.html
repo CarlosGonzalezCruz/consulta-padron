@@ -24,26 +24,36 @@
                         <div class="d-flex flex-column flex-md-row w-md-80 min-vh-50">
                             <div id="user-role-list-container" class="d-flex flex-column flex-fill flex-md-grow-0 fixed-w-md-200 fixed-w-lg-300 rounded border mb-2 mb-md-0 mr-md-3 p-3">
                                 <input id="search-field" class="form-control mb-1" placeholder="Buscar...">
-                                <div class="h-0 overflow-y flex-fill">
+                                <div class="h-0 min-h-px-40 overflow-y flex-fill mb-1">
                                     <table id="user-role-list" class="w-100 table table-sm h-0 w-50">
                                         <!-- Will be filled in runtime -->
                                     </table>
                                 </div>
-                                <button id="user-button-create" class="btn btn-success">
+                                <button id="user-button-create" class="btn btn-success d-none">
                                     <img src="icons/person-fill-add.svg" class="svg-inverted-color img-fluid">
                                     Añadir usuario
                                 </button>
+                                <button id="role-button-create" class="btn btn-success d-none">
+                                    <img src="icons/file-earmark-plus.svg" class="svg-inverted-color img-fluid">
+                                    Añadir rol
+                                </button>
                             </div>
                             <div id="user-role-details-container" class="d-flex flex-column flex-fill rounded border mb-2 mb-md-0 p-1">
-                                <div id="default-user-placeholder" class="placeholder d-flex flex-column flex-fill justify-content-center align-items-center">
+                                <div id="default-user-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
                                     <img src="icons/person-workspace.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
                                     <h5 class="text-center">
                                         Seleccione un usuario de la lista.
                                     </h5>
                                 </div>
+                                <div id="default-role-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/card-checklist.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        Seleccione un rol de la lista.
+                                    </h5>
+                                </div>
                                 <div id="user-details-panel" class="d-none flex-column flex-fill p-3">
-                                    <div class="d-flex flex-column flex-fill justify-content-around align-items-center overflow-y">
-                                        <div class="row w-100 px-2">
+                                    <div class="d-flex flex-column flex-fill h-0 min-h-px-40 mb-1 overflow-y">
+                                        <div class="row w-100 p-2 my-auto">
                                             <div class="col-5">
                                                 <b>Usuario de LDAP</b>
                                             </div>
@@ -51,14 +61,14 @@
                                                 <span id="user-field-username"></span>
                                                 <img id="user-field-username-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
                                             </div>
-                                            <div id="user-details-aux-admin-warning" class="d-none">
+                                            <div id="user-details-aux-admin-warning" class="d-none col-12">
                                                 <small class="login-error">
                                                     Esta cuenta es auxiliar y no se puede modificar desde aquí. Cambie el perfil del servidor y reinícielo
                                                     para aplicar los cambios.
                                                 </small>
                                             </div>
                                         </div>
-                                        <div class="row w-100 px-2">
+                                        <div class="row w-100 p-2 my-auto">
                                             <div class="col-5">
                                                 <b>Rol</b>
                                             </div>
@@ -66,7 +76,7 @@
                                                 <span id="user-field-role"></span>
                                                 <img id="user-field-role-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
                                             </div>
-                                            <div class="d-block w-100">
+                                            <div class="col-12">
                                                 <small class="gray-text">
                                                     El rol determina las entradas que el usuario puede ver, así como si puede acceder al panel
                                                     de administración.
@@ -74,11 +84,97 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="row w-100 px-2 align-right">
-                                        <button id="user-button-delete" class="btn btn-danger ml-auto">
-                                            <img src="icons/person-fill-dash.svg" class="svg-inverted-color img-fluid">
-                                            Eliminar usuario
-                                        </b>
+                                    <div class="row w-100 px-2 ml-auto">
+                                        <div class="d-flex flex-column flex-lg-row align-items-end ml-auto">
+                                            <button id="user-button-delete" class="btn btn-danger mb-1 ml-lg-auto disabled">
+                                                <img src="icons/person-fill-dash.svg" class="svg-inverted-color img-fluid">
+                                                Eliminar usuario
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="role-details-panel" class="d-none flex-column flex-fill p-3">
+                                    <div class="d-flex flex-column flex-fill h-0 min-h-px-40 mb-1 overflow-y">
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Nombre del rol</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-name"></span>
+                                                <img id="role-field-name-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Rol base</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-parent"></span>
+                                                <img id="role-field-parent-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    Si hay un rol base, se heredarán sus permisos excepto en los casos en los que se
+                                                    indique lo contrario.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Predeterminado</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-is-default"></span>
+                                                <img id="role-field-is-default-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    Las cuentas de nueva creación recibirán este rol hasta que se le asigne otro. Solo puede
+                                                    haber un rol predeterminado en un momento dado.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Administrador</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-is-admin"></span>
+                                                <img id="role-field-is-admin-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    Los usuarios con rol de administrador pueden acceder a este panel y editar los roles.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Usuarios con este rol</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-user-amount"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row w-100 px-2 ml-auto">
+                                        <div class="d-flex flex-row align-items-end ml-auto">
+                                            <button id="role-button-permissions" class="btn btn-primary mb-1 ml-auto">
+                                                <img src="icons/list-check.svg" class="svg-inverted-color img-fluid">
+                                                <p class="d-inline d-xl-none">Permisos</p>
+                                                <p class="d-none d-xl-inline">Cambiar permisos</p>
+                                            </button>
+                                            <button id="role-button-extend" class="btn btn-primary mb-1 ml-1">
+                                                <img src="icons/file-earmark-text.svg" class="svg-inverted-color img-fluid">
+                                                <p class="d-inline d-xl-none">Derivado</p>
+                                                <p class="d-none d-xl-inline">Crear rol derivado</p>
+                                            </button>
+                                            <button id="role-button-delete" class="btn btn-danger mb-1 ml-1 disabled">
+                                                <img src="icons/file-earmark-minus.svg" class="svg-inverted-color img-fluid">
+                                                <p class="d-inline d-xl-none">Eliminar</p>
+                                                <p class="d-none d-xl-inline">Eliminar rol</p>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -86,8 +182,8 @@
                         <div class="d-flex flex-column flex-grow-1 mr-md-3">
                             <div id="user-role-tabs">
                                 <ul class="list-group">
-                                    <li class="list-group-item list-group-item-action disabled" tab-content="users">Usuarios</li>
-                                    <li class="list-group-item list-group-item-action disabled" tab-content="roles">Roles</li>                             
+                                    <li class="list-group-item list-group-item-action" tab-content="users">Usuarios</li>
+                                    <li class="list-group-item list-group-item-action" tab-content="roles">Roles</li>                             
                                 </ul>
                             </div>
                             <div class="rounded border d-flex flex-row mt-2 mt-md-auto p-2 mw-100">
@@ -189,6 +285,40 @@
                     <div class="modal-footer">
                         <div class="btn btn-secondary" data-dismiss="modal">Cancelar</div>
                         <div id="modal-delete-user-confirm" class="btn btn-danger" data-dismiss="modal">Eliminar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-create-role" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Añadir rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Introduzca el nombre del rol</b>:</p>
+                        <input id="modal-create-role-input-field" type="text" class="form-control w-100" placeholder="Nombre del rol">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-create-role-confirm" class="btn btn-success">Añadir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-update-rolename" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Cambiar nombre de rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Nuevo nombre para el rol <b><span id="modal-update-rolename-selected-username"></span></b>:</p>
+                        <input id="modal-update-rolename-input-field" type="text" class="form-control w-100" placeholder="Nombre del rol">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-update-rolename-confirm" class="btn btn-primary">Aceptar</button>
                     </div>
                 </div>
             </div>

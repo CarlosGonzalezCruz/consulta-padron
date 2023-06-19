@@ -110,6 +110,14 @@ export async function getRole(id :number) {
 }
 
 
+export async function getAllRoles() {
+    let result = await db.performQueryMySQL(`
+        SELECT id, name FROM ${db.profileTable("ROLES")} ORDER BY name;
+    `) as {id :number, name :string}[];
+    return result;
+}
+
+
 export async function getDefaultRole() {
     let result = await db.performQueryMySQL(`
         SELECT * FROM ${db.profileTable("ROLES")} WHERE isDefault='T';
@@ -125,6 +133,23 @@ export async function setDefaultRole(roleId :number) {
     await db.performQueryMySQL(`
         UPDATE ${db.profileTable("ROLES")} SET isDefault='T' WHERE id=${roleId};
     `);
+}
+
+
+export async function setAdminRole(roleId :number, isAdmin :boolean) {
+    await db.performQueryMySQL(`
+        UPDATE ${db.profileTable("ROLES")} SET isAdmin='${isAdmin ? 'T' : 'F'}' WHERE id=${roleId};
+    `);
+}
+
+
+export async function getAllUsersWithRole(roleId :number) {
+    let result = await db.performQueryMySQL(`
+        SELECT U.id, U.username FROM ${db.profileTable("USERS")} U
+        INNER JOIN ${db.profileTable("ROLES")} R ON U.role=R.id
+        WHERE R.id=${roleId};
+    `) as {id :number, username :string}[];
+    return result;
 }
 
 
@@ -160,9 +185,9 @@ export async function getUserRoleByUsername(username :string) {
 
 async function getRoleCount() {
     let result = await db.performQueryMySQL(`
-        SELECT COUNT(1) FROM ${db.profileTable("ROLES")};
-    `) as number[];
-    return result.length > 0 ? result[0] : 0;
+        SELECT COUNT(1) AS COUNT FROM ${db.profileTable("ROLES")};
+    `) as {COUNT :number}[];
+    return result[0].COUNT;
 }
 
 
@@ -204,17 +229,50 @@ export async function updateUserUsername(id :number, newName :string) {
 }
 
 
-export async function createRole(name :string, initialPermissions :any) {
+export async function createRole(name :string, initialPermissions :any, parentRoleId :number | null = null) {
     try {
-        let isFirstRole = await getRoleCount();
+        let isFirstRole = (await getRoleCount()) == 0;
         let permissions = utils.jsonToBuffer(initialPermissions);
         await db.performQueryMySQL(`
-            INSERT INTO ${db.profileTable("ROLES")}(name, isDefault, isAdmin, entries)
-            VALUES ('${name}', '${isFirstRole ? 'T' : 'F'}', 'F', '${permissions}');
+            INSERT INTO ${db.profileTable("ROLES")}(name, isDefault, isAdmin, parent, entries)
+            VALUES ('${name}', '${isFirstRole ? 'T' : 'F'}', 'F', ${parentRoleId}, '${permissions}');
         `, true);
         console.log(`Creado rol ${name}`);
     } catch(e) {
         console.error(`Ha ocurrido un problema al crear el rol. Causa: ${e}`);
+    }
+}
+
+
+export async function getLastCreatedRole() {
+    let result = await db.performQueryMySQL(`
+        SELECT * FROM ${db.profileTable("ROLES")} ORDER BY id DESC LIMIT 1
+    `) as Role[];
+    return result.length > 0 ? result[0] : null;
+}
+
+
+export async function updateRoleName(id :number, newName :string) {
+    try {
+        await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("ROLES")} SET name="${newName}" WHERE id=${id};
+        `);
+        console.log(`Se ha actualizado el nombre del rol ${id} a "${newName}"`);
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al renombrar el rol. Causa: ${e}`);
+    }
+
+}
+
+
+export async function deleteRole(id :number) {
+    try {
+        await db.performQueryMySQL(`
+            DELETE FROM ${db.profileTable("ROLES")} WHERE id=${id} AND isDefault='F';
+        `, true);
+        console.log(`Eliminado rol con id ${id}`);
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al eliminar el usuario. Causa: ${e}`);
     }
 }
 

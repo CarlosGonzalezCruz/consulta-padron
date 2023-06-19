@@ -127,6 +127,7 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
             if(result.data.unauthorized) {
                 makeTableVisible(false, $("#unauthorized-placeholder"));
             } else {
+                $("#not-found-placeholder-id-number").text(processedId.display);
                 makeTableVisible(false, $("#not-found-placeholder"));
             }
         } else {

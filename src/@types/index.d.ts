@@ -7,11 +7,13 @@ interface Array<T> {
 
 
 declare type DBBinary = 'T' | 'F';
+declare type RequestMethod = "GET" | "PUT" | "POST" | "DELETE";
 
 declare type User = {
     id :number,
     username :string,
-    role :number
+    role :number,
+    isAuxiliar :DBBinary
 }
 
 declare type Role = {

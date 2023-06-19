@@ -7,8 +7,7 @@ import * as msg from "./message-box.js";
 msg.preloadMsgBoxIcons();
 
 admin.enableSessionLinks();
-admin.enableButtons();
-admin.populateUsersTable();
+admin.initialize();
 
 utils.addModalButtonKeybinding();
 utils.documentReady().then(() => {

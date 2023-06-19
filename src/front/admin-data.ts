@@ -1,16 +1,22 @@
 import * as query from "./query-data.js";
 import * as msg from "./message-box.js";
 import * as utils from "./utils.js";
+import * as adminFetch from "./admin-fetch.js";
 
 const SEARCH_TIMEOUT_MS = 300;
 
 let selectedUser :number | null = null;
 let selectedUsername :string = "";
+let selectedRole :number | null = null;
+let selectedRolename :string = "";
 
+let listCategory :"users" | "roles" = "users";
 let listFilter :string = "";
 let searchTimeout :NodeJS.Timeout | null = null;
+let lastDefaultRole :number | null = null;
+let creatingChildRole = false;
 
-export async function enableButtons() {
+export async function initialize() {
     await utils.documentReady();
 
     $("#user-button-create").on("click", () => {
@@ -30,25 +36,63 @@ export async function enableButtons() {
         $("#modal-delete-user-selected-username").text(selectedUsername);
         $("#modal-delete-user").modal("show");
     });
-
-    bindModalSubmitToInput($("#modal-create-user-input-field"), $("#modal-create-user-confirm"));
-    bindModalSubmitToInput($("#modal-update-username-input-field"), $("#modal-update-username-confirm"));
-
+    $("#role-button-create").on("click", () => {
+        creatingChildRole = false;
+        focusModalInputField($("#modal-create-role"));
+        $("#modal-create-role").modal("show");
+    });
+    $("#role-button-extend").on("click", () => {
+        creatingChildRole = true;
+        focusModalInputField($("#modal-create-role"));
+        $("#modal-create-role").modal("show");
+    });
+    $("#role-field-name-edit").on("click", () => {
+        $("#modal-update-rolename-selected-username").text(selectedRolename);
+        $("#modal-update-rolename-input-field").val(selectedRolename);
+        focusModalInputField($("#modal-update-rolename"));
+        $("#modal-update-rolename").modal("show");
+    });
+    $("#role-field-is-admin-edit").on("click", async () => {
+        await adminFetch.toggleRoleAdmin(selectedRole, $("#role-field-is-admin").attr("value") as DBBinary, selectRole);
+    });
+    $("#role-field-is-default-edit").on("click", async () => {
+        await toggleDefaultRole();
+    })
+    
     $("#modal-create-user-confirm").on("click", async function() {
         if(!$(this).is(".disabled")) {
             $("#modal-create-user").modal("hide");
-            await createNewUser();
+            await adminFetch.createNewUser($("#modal-create-user-input-field").val() as string, selectUser, selectUser);
         }
     });
     $("#modal-update-username-confirm").on("click", async function() {
         if(!$(this).is(".disabled")) {
             $("#modal-update-username").modal("hide");
-            await renameSelectedUser();
+            await adminFetch.renameUser(selectedUser, selectedUsername, $("#modal-update-username-input-field").val() as string, selectUser);
         }
     });
     $("#modal-delete-user-confirm").on("click", async () => {
-        await deleteSelectedUser();
+        $("#modal-delete-user").modal("hide");
+        await adminFetch.deleteUser(selectedUser, () => selectUser(null));
     });
+    $("#modal-create-role-confirm").on("click", async () => {
+        $("#modal-create-role").modal("hide");
+        await adminFetch.createNewRole($("#modal-create-role-input-field").val() as string, creatingChildRole ? selectedRole : null, selectRole);
+    });
+    $("#modal-update-rolename-confirm").on("click", async () => {
+        $("#modal-update-rolename").modal("hide");
+        await adminFetch.renameRole(selectedRole, selectedRolename, $("#modal-update-rolename-input-field").val() as string, selectRole);
+    });
+
+    $("#user-role-tabs li").on("click", function() {
+        updateTabs($(this));
+    });
+    updateTabs($("#user-role-tabs li[tab-content='users']"));
+
+    bindModalSubmitToInput($("#modal-create-user-input-field"), $("#modal-create-user-confirm"));
+    bindModalSubmitToInput($("#modal-update-username-input-field"), $("#modal-update-username-confirm"));
+    bindModalSubmitToInput($("#modal-create-role-input-field"), $("#modal-create-role-confirm"));
+    bindModalSubmitToInput($("#modal-update-rolename-input-field"), $("#modal-update-rolename-confirm"));
     enableSearch();
 }
 
@@ -63,21 +107,37 @@ export function enableSessionLinks() {
 }
 
 
-export async function populateUsersTable() {
-    let usersData = await fetchAllUsers();
+export async function populateList() {
+    let data = listCategory == "users" ? await adminFetch.fetchAllUsers() : await adminFetch.fetchAllRoles();
     const TABLE = $("#user-role-list");
     TABLE.empty();
-    for(let user of usersData) {
-        if(!entryMatchesFilter(user.username)) {
-            continue;
+
+    if(listCategory == "users") {
+        for(let user of data) {
+            if(!entryMatchesFilter(user.username)) {
+                continue;
+            }
+            let row = $("<tr>");
+            let element = $("<td>");
+            element.attr("user-id", user.id);
+            element.text(user.username);
+            assignUserItemClickEvent(element);
+            row.append(element);
+            TABLE.append(row);
         }
-        let row = $("<tr>");
-        let element = $("<td>");
-        element.attr("user-id", user.id);
-        element.text(user.username);
-        assignUserItemClickEvent(element);
-        row.append(element);
-        TABLE.append(row);
+    } else if(listCategory == "roles") {
+        for(let role of data) {
+            if(!entryMatchesFilter(role.name)) {
+                continue;
+            }
+            let row = $("<tr>");
+            let element = $("<td>");
+            element.attr("role-id", role.id);
+            element.text(role.name);
+            assignUserItemClickEvent(element);
+            row.append(element);
+            TABLE.append(row);
+        }   
     }
 }
 
@@ -93,7 +153,11 @@ function entryMatchesFilter(entry :string) {
 
 function assignUserItemClickEvent(elem :JQuery) {
     elem.on("click", function() {
-        selectedUser = Number($(this).attr("user-id"));
+        if(listCategory == "users") {
+            selectedUser = Number($(this).attr("user-id"));
+        } else {
+            selectedRole = Number($(this).attr("role-id"));
+        }
         updateSelectedItem();
         updateDetailsScreen();
     });
@@ -102,33 +166,102 @@ function assignUserItemClickEvent(elem :JQuery) {
 
 function updateSelectedItem() {
     $("#user-role-list .active").removeClass("active");
-    if(selectedUser != null) {
+    if(listCategory == "users" && selectedUser != null) {
         $(`#user-role-list td[user-id='${selectedUser}']`).addClass("active");
+    }
+    if(listCategory == "roles" && selectedRole != null) {
+        $(`#user-role-list td[role-id='${selectedRole}']`).addClass("active");
     }
 }
 
 
 async function updateDetailsScreen() {
-    if(selectedUser == null) {
-        $("#default-user-placeholder").addClass("d-flex");
-        $("#default-user-placeholder").removeClass("d-none");
-        $("#user-details-panel").addClass("d-none");
-        $("#user-details-panel").removeClass("d-flex");
-    } else {
-        $("#default-user-placeholder").addClass("d-none");
-        $("#default-user-placeholder").removeClass("d-flex");
-        $("#user-details-panel").removeClass("d-none");
-        $("#user-details-panel").addClass("d-flex");
+    utils.playCssAnimationOnce($("#user-role-details-container > *"), "fade-in");
 
-        let userData = await fetchUser(selectedUser);
-        if(userData == null) {
-            msg.displayMessageBox("No se ha podido obtener los datos del usuario.", 'error');
-            selectedUsername = "";
+    if(listCategory == "users") {
+        $("#default-role-placeholder").addClass("d-none").removeClass("d-flex");
+        $("#role-details-panel").addClass("d-none").removeClass("d-flex");
+
+        if(selectedUser == null) {
+            $("#default-user-placeholder").addClass("d-flex").removeClass("d-none");
+            $("#user-details-panel").addClass("d-none").removeClass("d-flex");
         } else {
-            $("#user-field-username").text(userData.username);
-            $("#user-field-role").text(userData.name);
-            selectedUsername = userData.username;
-            updateDetailsScreenForAuxAdmin(userData.isAuxiliar == 'T');
+            $("#default-user-placeholder").addClass("d-none").removeClass("d-flex");
+            $("#user-details-panel").addClass("d-flex").removeClass("d-none");
+    
+            let userData = await adminFetch.fetchUser(selectedUser);
+            if(userData == null) {
+                msg.displayMessageBox("No se ha podido obtener los datos del usuario.", 'error');
+                selectedUsername = "";
+            } else {
+                $("#user-field-username").text(userData.username);
+                $("#user-field-role").text(userData.name);
+                selectedUsername = userData.username;
+                updateDetailsScreenForAuxAdmin(userData.isAuxiliar == 'T');
+            }
+        }
+    } else if(listCategory == "roles") {
+        $("#default-user-placeholder").addClass("d-none").removeClass("d-flex");
+        $("#user-details-panel").addClass("d-none").removeClass("d-flex");
+
+        if(selectedRole == null) {
+            $("#default-role-placeholder").addClass("d-flex").removeClass("d-none");
+            $("#role-details-panel").addClass("d-none").removeClass("d-flex");
+        } else {
+            $("#default-role-placeholder").addClass("d-none").removeClass("d-flex");
+            $("#role-details-panel").addClass("d-flex").removeClass("d-none");
+    
+            let roleData = await adminFetch.fetchRole(selectedRole);
+            if(roleData == null) {
+                msg.displayMessageBox("No se ha podido obtener los datos del rol.", 'error');
+                selectedRolename = "";
+            } else { 
+                selectedRolename = roleData.name;
+                $("#role-field-name").text(roleData.name);
+                $("#role-field-is-default").attr("value", roleData.isDefault).text(`${utils.writeBoolean(roleData.isDefault)}`);
+                $("#role-field-is-admin").attr("value", roleData.isAdmin).text(`${utils.writeBoolean(roleData.isAdmin)}`);
+                $("#role-field-parent").text("");
+                $("#role-field-user-amount").text("");
+
+
+                if(roleData.isDefault == 'T') {
+                    $("#role-button-delete").addClass("disabled");
+                    if(lastDefaultRole == null || lastDefaultRole == roleData.id) {
+                        $("#role-field-is-default-edit").addClass("d-none");
+                    } else {
+                        $("#role-field-is-default-edit").removeClass("d-none");
+                    }
+                } else {
+                    $("#role-button-delete").removeClass("disabled");
+                    $("#role-field-is-default-edit").removeClass("d-none");
+                }
+                
+                let [ parentRoleData, usersWithRole ] = await Promise.all([
+                    adminFetch.fetchRole(roleData.parent),
+                    adminFetch.fetchAllUsersWithRole(selectedRole)
+                ]);
+                $("#role-field-user-amount").text(displayUsersWithRole(usersWithRole!));
+                if(parentRoleData != null) {
+                    $("#role-field-parent").text(parentRoleData.name);
+                } else {
+                    $("#role-field-parent").html("<span class='text-muted'>Ninguno</span>")
+                }
+
+            }
+        }
+    }
+}
+
+
+function displayUsersWithRole(users :{id :number, username :string}[]) {
+    if(users.length == 0 || users.length >= 10) {
+        return users.length.toString();
+    } else {
+        let text = users.map(u => u.username).join(", ");
+        if(text.length > 50) {
+            return users.length.toString();
+        } else {
+            return text;
         }
     }
 }
@@ -144,6 +277,27 @@ function updateDetailsScreenForAuxAdmin(isAuxAdmin :boolean) {
         $("#user-field-username-edit").removeClass("d-none");
         $("#user-button-delete").removeClass("disabled");
     }
+}
+
+
+async function updateTabs(clickedTab :JQuery) {
+    $("#user-role-tabs li").removeClass("active");
+    clickedTab.addClass("active");
+    listCategory = $(clickedTab).attr("tab-content") as "users" | "roles";
+
+    if(listCategory == "users") {
+        $("#user-button-create").removeClass("d-none");
+        $("#role-button-create").addClass("d-none");
+    } else if(listCategory == "roles") {
+        $("#user-button-create").addClass("d-none");
+        $("#role-button-create").removeClass("d-none");
+    }
+
+    await Promise.all([
+        updateDetailsScreen(),
+        populateList()
+    ]);
+    updateSelectedItem();
 }
 
 
@@ -175,9 +329,30 @@ async function selectUser(userId :number | null) {
     selectedUser = userId;
     await Promise.all([
         updateDetailsScreen(),
-        populateUsersTable()
-    ]); 
+        populateList()
+    ]);
     updateSelectedItem();
+}
+
+
+async function selectRole(roleId :number | null) {
+    selectedRole = roleId;
+    await Promise.all([
+        updateDetailsScreen(),
+        populateList()
+    ]);
+    updateSelectedItem();
+}
+
+
+async function toggleDefaultRole() {
+    let currentDefault = await adminFetch.fetchDefaultRole();
+    if(!!currentDefault && currentDefault.id != selectedRole) {
+        lastDefaultRole = currentDefault.id;
+        await adminFetch.toggleRoleDefault(selectedRole, () => selectRole(selectedRole));
+    } else if(lastDefaultRole != null) {
+        await adminFetch.toggleRoleDefault(lastDefaultRole, () => selectRole(selectedRole));
+    }
 }
 
 
@@ -188,172 +363,9 @@ function enableSearch() {
         }
         searchTimeout = setTimeout(async () => {
             listFilter = $(this).val() as string;
-            await populateUsersTable();
+            await populateList();
             updateSelectedItem();
             searchTimeout = null;
         }, SEARCH_TIMEOUT_MS);
     });
-}
-
-
-async function fetchAllUsers() {
-    let loadingHandler = msg.displayLoadingBox("Obteniendo usuarios...");
-    try {
-        let fetchRequest = await fetch("/admin/all-users", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            credentials: "include"
-        });
-        let data = await fetchRequest.json();
-        utils.concludeAndWait(loadingHandler);
-        if(data.success) {
-            return data.data;
-        } else {
-            msg.displayMessageBox("No se ha podido obtener los usuarios.", 'error');
-            return null;
-        }
-    } catch(e) {
-        await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al obtener los usuarios.", 'error');
-        console.error(`Ha ocurrido un problema al obtener los usuarios. Causa: ${e}`);
-        return null;
-    }
-}
-
-
-async function fetchUser(id :number) {
-    let loadingHandler = msg.displayLoadingBox("Obteniendo datos del usuario...");
-    try {
-        let fetchRequest = await fetch("/admin/user", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                userId: id
-            }),
-            credentials: "include"
-        });
-        let data = await fetchRequest.json();
-        await utils.concludeAndWait(loadingHandler);
-        if(data.success) {
-            return data.data;
-        } else {
-            msg.displayMessageBox("No se ha podido obtener los datos del usuario.", 'error');
-            return null;
-        }
-    } catch(e) {
-        await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al obtener los datos del usuario.", 'error');
-        console.error(`Ha ocurrido un problema al obtener los datos del usuario. Causa: ${e}`);
-        return null;
-    }
-}
-
-
-async function createNewUser() {
-    let username = $("#modal-create-user-input-field").val();
-    if(!$("#modal-create-user-input-field").val()) {
-        msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
-        return;
-    }
-
-    let loadingHandler = msg.displayLoadingBox("Creando nuevo usuario...");
-    try {
-        let fetchRequest = await fetch("/admin/user", {
-            method: "PUT",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                username
-            }),
-            credentials: "include"
-        });
-        let data = await fetchRequest.json();
-        await utils.concludeAndWait(loadingHandler);
-        if(data.success) {
-            msg.displayMessageBox(`Se ha creado una cuenta para el usuario ${data.user.username}.`, 'success');
-            selectUser(data.user.id);
-        } else if(data.duplicate) {
-            msg.displayMessageBox(`El nombre de usuario introducido ya está en uso para otro usuario.`, 'error');
-            selectUser(data.id);
-        } else {
-            msg.displayMessageBox(`No se ha podido crear la cuenta de usuario.`, 'error');
-        }
-    } catch(e) {
-        await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al crear la cuenta de usuario.", 'error');
-        console.error(`Ha ocurrido un problema al crear la cuenta de usuario. Causa: ${e}`);
-    }
-}
-
-
-async function renameSelectedUser() {
-    if(selectedUser == null) {
-        msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
-        return;
-    }
-    if(!$("#modal-update-username-input-field").val()) {
-        console.error("El nombre de usuario no puede quedar vacío.");
-        return;
-    }
-    if(selectedUsername == $("#modal-update-username-input-field").val()) {
-        console.error("El nombre de usuario solicitado es igual al actual. No se actualizará nada.");
-        return;
-    }
-    let loadingHandler = msg.displayLoadingBox("Aplicando nuevo nombre de usuario...");
-    try {
-        let fetchRequest = await fetch("/admin/user-update-username", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                userId: selectedUser,
-                newName: $("#modal-update-username-input-field").val()
-            }),
-            credentials: "include"
-        });
-        let data = await fetchRequest.json();
-        await utils.concludeAndWait(loadingHandler);
-        if(data.success) {
-            selectUser(selectedUser);
-        } else if(data.reserved) {
-            msg.displayMessageBox("El nombre de usuario introducido está reservado para el servidor. Elija otro o modifique las propiedades del servidor.", 'error');
-        } else if(data.duplicate) {
-            msg.displayMessageBox("El nombre de usuario introducido ya está en uso para otro usuario. Elija otro.", 'error');
-        } else {
-            msg.displayMessageBox("No se ha podido actualizar el nombre del usuario.", 'error');
-        }
-    } catch(e) {
-        await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al actualizar el nombre del usuario.", 'error');
-        console.error(`Ha ocurrido un problema al actualizar el nombre del usuario. Causa: ${e}`);
-    }
-}
-
-
-async function deleteSelectedUser() {
-    if(selectedUser == null) {
-        console.error("No hay usuario seleccionado. No se eliminará nada.");
-        return;
-    }
-    let loadingHandler = msg.displayLoadingBox("Eliminando usuario...");
-    try {
-        let fetchRequest = await fetch("/admin/user", {
-            method: "DELETE",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                userId: selectedUser
-            }),
-            credentials: "include"
-        });
-        let data = await fetchRequest.json();
-        await utils.concludeAndWait(loadingHandler);
-        if(data.success) {
-            msg.displayMessageBox("Se ha eliminado los datos del usuario correctamente.", 'success');
-            selectUser(null);
-        } else {
-            msg.displayMessageBox("No se ha podido eliminar los datos del usuario.", 'error');
-        }
-    } catch(e) {
-        await utils.concludeAndWait(loadingHandler);
-        msg.displayMessageBox("Ha ocurrido un problema al eliminar los datos del usuario.", 'error');
-        console.error(`Ha ocurrido un problema al eliminar los datos del usuario. Causa: ${e}`);
-    }
 }
