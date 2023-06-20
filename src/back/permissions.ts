@@ -1,5 +1,6 @@
 import * as db from "./db-queries.js";
 import * as utils from "./utils.js";
+import * as inhabitant from "./inhabitant-data.js";
 
 
 export async function identify(username :string) {
@@ -34,12 +35,29 @@ export async function findAuxAdmin(adminUsername :string = "admin") {
 }
 
 
-export async function getEffectivePermissions(role :Role) {
-    let entries = utils.bufferToJson(role.entries);
-    let ret :string[] = [];
-    for(let entry in entries) {
-        if(entries[entry] == true) {
-            ret.push(entry);
+export async function getEffectivePermissions(role :Role, pendingKeys? :Set<string>) {
+    if(pendingKeys == null) {
+        pendingKeys = new Set(Array.from(inhabitant.getPermissionEntries()).map(e => e.permissionKey));
+    }   
+    let currentPermissions = utils.bufferToJson(role.entries);
+    let ret :EffectiveRolePermissions = {};
+    for(let key in currentPermissions) {
+        if(pendingKeys.has(key)) {
+            ret[key] = currentPermissions[key];
+            pendingKeys.delete(key);
+        }
+    }
+    if(pendingKeys.size != 0) {
+        let parentRole = await db.getRole(role.parent);
+        if(parentRole != null) {
+            let parentPermissions = await getEffectivePermissions(parentRole, pendingKeys);
+            for(let key in parentPermissions) {
+                ret[key] = parentPermissions[key];
+            }
+        } else {
+            for(let key of pendingKeys) {
+                ret[key] = false;
+            }
         }
     }
     return ret;
@@ -53,4 +71,4 @@ export async function getDefaultRole() {
         role = await db.getDefaultRole();
     }
     return role!;
-}
+}                                       

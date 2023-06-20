@@ -123,14 +123,14 @@ const ENTRIES = [
 ];
 
 
-export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
-    if(allowedKeys.length == 0) {
+export async function generateEntriesFor(idDoc :string, allowedKeys :EffectiveRolePermissions) {
+    if(Object.keys(allowedKeys).length == 0) {
         return {
             success: false as const,
             unauthorized: true
         };
     }
-    let selectedFields = ENTRIES.filter(e => allowedKeys.contains(e.permissionKey)).map(e => e.field).filter(utils.ensureNotNull);
+    let selectedFields = ENTRIES.filter(e => e.permissionKey in allowedKeys).map(e => e.field).filter(utils.ensureNotNull);
     let query = await db.getInhabitantByIdDoc(idDoc, selectedFields);
     if(query.length == 0) {
         return {
@@ -141,8 +141,21 @@ export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
         return {
             success: true as const,
             idDoc: idDoc,
-            fullName: await calculateValues(query, {field: "HAB.NOMBRE_COMPLETO"}, allowedKeys.contains("full_name")),
-            entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query, e, allowedKeys.contains(e.permissionKey))))
+            fullName: await calculateValues(query, {field: "HAB.NOMBRE_COMPLETO"}, "full_name" in allowedKeys),
+            entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query, e, e.permissionKey in allowedKeys)))
+        };
+    }
+}
+
+
+export function* getPermissionEntries() {
+    for(let entry of ENTRIES) {
+        if(!entry.permissionKey) {
+            continue;
+        }
+        yield {
+            permissionKey: entry.permissionKey,
+            displayKey: entry.displayKey ?? entry.permissionKey
         };
     }
 }

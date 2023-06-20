@@ -24,3 +24,13 @@ declare type Role = {
     parent :number,
     entries :string
 }
+
+
+declare type RolePermissions = {
+    [key :string] :boolean | null;
+}
+
+
+declare type EffectiveRolePermissions = {
+    [key :string] :boolean;
+}

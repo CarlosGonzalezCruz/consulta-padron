@@ -40,6 +40,11 @@
     width: 300px;
 }
 
+.vh-50 {
+    height: 50vh;
+    min-height: 50vh;
+}
+
 @media (min-width: 768px) {
     .w-md-80 {
         width: 80% !important;

@@ -228,6 +228,7 @@ endpoint("/admin/role-get-default", "POST", async (request, result) => {
     }
 });
 
+
 endpoint("/admin/role-set-default", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success || !data.data.isAdmin) {
@@ -235,6 +236,40 @@ endpoint("/admin/role-set-default", "POST", async (request, result) => {
     } else {
         await db.setDefaultRole(request.body.roleId);
         result.send({success: true, data: await db.getDefaultRole()});
+    }
+});
+
+endpoint("/admin/permission-entries", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: Array.from(inhabitant.getPermissionEntries())});
+    }
+});
+
+endpoint("/admin/get-role-effective-permissions", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        let role = await db.getRole(request.body.roleId);
+        if(role == null) {
+            result.send({success: true, data: []});
+        } else {
+            let effectivePermissions = await permissions.getEffectivePermissions(role);
+            result.send({success: true, data: effectivePermissions});
+        }
+    }
+});
+
+endpoint("/admin/role-update-permissions", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        await db.updateRolePermissions(request.body.roleId, request.body.permissions);
+        result.send({success: true});
     }
 });
 

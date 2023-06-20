@@ -86,7 +86,7 @@
                                     </div>
                                     <div class="row w-100 px-2 ml-auto">
                                         <div class="d-flex flex-column flex-lg-row align-items-end ml-auto">
-                                            <button id="user-button-delete" class="btn btn-danger mb-1 ml-lg-auto disabled">
+                                            <button id="user-button-delete" class="btn btn-danger ml-lg-auto disabled">
                                                 <img src="icons/person-fill-dash.svg" class="svg-inverted-color img-fluid">
                                                 Eliminar usuario
                                             </button>
@@ -159,17 +159,17 @@
                                     </div>
                                     <div class="row w-100 px-2 ml-auto">
                                         <div class="d-flex flex-row align-items-end ml-auto">
-                                            <button id="role-button-permissions" class="btn btn-primary mb-1 ml-auto">
+                                            <button id="role-button-permissions" class="btn btn-primary ml-auto">
                                                 <img src="icons/list-check.svg" class="svg-inverted-color img-fluid">
                                                 <p class="d-inline d-xl-none">Permisos</p>
                                                 <p class="d-none d-xl-inline">Cambiar permisos</p>
                                             </button>
-                                            <button id="role-button-extend" class="btn btn-primary mb-1 ml-1">
+                                            <button id="role-button-extend" class="btn btn-primary ml-1">
                                                 <img src="icons/file-earmark-text.svg" class="svg-inverted-color img-fluid">
                                                 <p class="d-inline d-xl-none">Derivado</p>
                                                 <p class="d-none d-xl-inline">Crear rol derivado</p>
                                             </button>
-                                            <button id="role-button-delete" class="btn btn-danger mb-1 ml-1 disabled">
+                                            <button id="role-button-delete" class="btn btn-danger ml-1 disabled">
                                                 <img src="icons/file-earmark-minus.svg" class="svg-inverted-color img-fluid">
                                                 <p class="d-inline d-xl-none">Eliminar</p>
                                                 <p class="d-none d-xl-inline">Eliminar rol</p>
@@ -319,6 +319,39 @@
                     <div class="modal-footer">
                         <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                         <button id="modal-update-rolename-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-role-permissions" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Permisos del rol <span id="modal-role-permissions-rolename"></span></h3>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modal-role-permissions-caption"></p>
+                        <div class="overflow-y vh-50">
+                            <table class="table table-sm h-0">
+                                <tbody id="modal-role-permissions-table">
+                                    <tr id="modal-role-permissions-table-row-template" class="jquery-hidden">
+                                        <td><b>{{displayKey}}</b></td>
+                                        <td>
+                                            <input field="allow" type="checkbox">
+                                            <small field="allow">Permitir</small>
+                                        </td>
+                                        <td class="d-none">
+                                            <input field="inherit" type="checkbox">
+                                            <small field="inherit">Heredar</small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-role-permissions-confirm" class="btn btn-primary">Aceptar</button>
                     </div>
                 </div>
             </div>

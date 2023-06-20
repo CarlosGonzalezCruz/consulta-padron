@@ -15,6 +15,7 @@ let listFilter :string = "";
 let searchTimeout :NodeJS.Timeout | null = null;
 let lastDefaultRole :number | null = null;
 let creatingChildRole = false;
+let selectedRoleInheritedPermissions :EffectiveRolePermissions = {};
 
 export async function initialize() {
     await utils.documentReady();
@@ -45,6 +46,10 @@ export async function initialize() {
         creatingChildRole = true;
         focusModalInputField($("#modal-create-role"));
         $("#modal-create-role").modal("show");
+    });
+    $("#role-button-permissions").on("click", async () => {
+        await prepareRolePermissionsModal("Seleccione las entradas que los usuarios con este rol pueden consultar.");
+        $("#modal-role-permissions").modal("show");
     });
     $("#role-field-name-edit").on("click", () => {
         $("#modal-update-rolename-selected-username").text(selectedRolename);
@@ -82,6 +87,11 @@ export async function initialize() {
     $("#modal-update-rolename-confirm").on("click", async () => {
         $("#modal-update-rolename").modal("hide");
         await adminFetch.renameRole(selectedRole, selectedRolename, $("#modal-update-rolename-input-field").val() as string, selectRole);
+    });
+    $("#modal-role-permissions-confirm").on("click", async () => {
+        $("#modal-role-permissions").modal("hide");
+        let permissions = readSelectedPermissions($("#modal-role-permissions-table"));
+        await adminFetch.updateRolePermissions(selectedRole, permissions);
     });
 
     $("#user-role-tabs li").on("click", function() {
@@ -295,9 +305,8 @@ async function updateTabs(clickedTab :JQuery) {
 
     await Promise.all([
         updateDetailsScreen(),
-        populateList()
+        populateList().then(updateSelectedItem)
     ]);
-    updateSelectedItem();
 }
 
 
@@ -368,4 +377,86 @@ function enableSearch() {
             searchTimeout = null;
         }, SEARCH_TIMEOUT_MS);
     });
+}
+
+
+async function prepareRolePermissionsModal(caption :string) {
+    if(selectedRole == null) {
+        return;
+    }
+    $("#modal-role-permissions-rolename").text(selectedRolename);
+    $("#modal-role-permissions-caption").text(caption);
+
+    let template = $("#modal-role-permissions-table-row-template");
+    $("#modal-role-permissions-table").children(":not(#modal-role-permissions-table-row-template)").remove();
+
+    let [ entries, roleData ] = await Promise.all([
+        adminFetch.fetchPermissionEntries(),
+        adminFetch.fetchRole(selectedRole),
+    ]);
+    selectedRoleInheritedPermissions = await adminFetch.fetchRoleEffectivePermissions(roleData!.parent) as EffectiveRolePermissions;
+    let permissions = JSON.parse(roleData!.entries);
+    for(let entry of entries!) {
+        generateRolePermissionsRow({
+            permissionKey: entry.permissionKey,
+            displayKey: entry.displayKey,
+            hasParent: roleData?.parent != null,
+            inherited: permissions[entry.permissionKey] == null,
+            allowed: permissions[entry.permissionKey],
+        }, template, $("#modal-role-permissions-table"));
+    }
+}
+
+
+function generateRolePermissionsRow(data :any, template :JQuery<Element>, tableBody :JQuery<HTMLElement>) {
+    let row = template.clone();
+    row.removeAttr("id");
+    row.attr("permission-key", data.permissionKey);
+    let rowHtml = row.html();
+
+    // Find all {{placeholders}} and replace them with the value corresponding to the field of the same name in received data
+    let matches = rowHtml.matchAll(/{{(\w*)}}/g);
+
+    for(let match of matches) {
+        if(match[1] in data) {
+            rowHtml = rowHtml.replace(match[0], data[match[1]] == null ? '—' : data[match[1]]);
+        }
+    }
+
+    row.html(rowHtml);
+    let allowCheckbox = row.find("input[field='allow']");
+    let inheritCheckbox = row.find("input[field='inherit']");
+    if(data.hasParent) {
+        inheritCheckbox.parent().removeClass("d-none");
+        inheritCheckbox.on("click", () => {
+            allowCheckbox.attr("disabled", inheritCheckbox.prop("checked"));
+            if(inheritCheckbox.prop("checked")) {
+                allowCheckbox.prop("checked", selectedRoleInheritedPermissions[row.attr("permission-key") as string]);
+            }
+        });
+    }
+    if(data.inherited && data.hasParent) {
+        inheritCheckbox.prop('checked', true);
+        allowCheckbox.attr('disabled', 'disabled');
+        allowCheckbox.prop('checked', selectedRoleInheritedPermissions[row.attr("permission-key") as string]);
+    } else if(data.allowed) {
+        allowCheckbox.prop('checked', true);
+    }
+    row.find("small[field='allow']").on("click", () => allowCheckbox.trigger("click"));
+    row.find("small[field='inherit']").on("click", () => inheritCheckbox.trigger("click"));
+
+    tableBody.append(row);
+    row.show();
+}
+
+
+function readSelectedPermissions(tableBody :JQuery<HTMLElement>) {
+    let ret :RolePermissions = {};
+    for(let child of tableBody.children("tr:visible")) {
+        let key = $(child).attr("permission-key") as string;
+        let inherit = $(child).find("input[field='inherit']").prop('checked') as boolean;
+        let allow = $(child).find("input[field='allow']").prop('checked') as boolean;
+        ret[key!] = inherit ? null : allow;
+    }
+    return ret;
 }

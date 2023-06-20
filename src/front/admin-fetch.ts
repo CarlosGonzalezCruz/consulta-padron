@@ -122,6 +122,46 @@ export async function fetchDefaultRole() {
 }
 
 
+export async function fetchPermissionEntries() {
+    let loadingHandler = msg.displayLoadingBox("Obteniendo permisos...");
+    try {
+        let data = await fetchRequest("/admin/permission-entries", "POST", {});
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            return data.data as {permissionKey :string, displayKey :string}[];
+        } else {
+            msg.displayMessageBox("No se ha podido obtener los permisos.", 'error');
+            return null;
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al obtener los permisos.", 'error');
+        console.error(`Ha ocurrido un problema al obtener los permisos. Causa: ${e}`);
+        return null;
+    }
+}
+
+
+export async function fetchRoleEffectivePermissions(roleId :number) {
+    let loadingHandler = msg.displayLoadingBox("Obteniendo permisos del rol...");
+    try {
+        let data = await fetchRequest("/admin/get-role-effective-permissions", "POST", {roleId});
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            return data.data as EffectiveRolePermissions;
+        } else {
+            msg.displayMessageBox("No se ha podido obtener los permisos.", 'error');
+            return null;
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al obtener los permisos.", 'error');
+        console.error(`Ha ocurrido un problema al obtener los permisos. Causa: ${e}`);
+        return null;
+    }
+}
+
+
 export async function createNewUser(username :string, onSuccess? :(id :number) => void, onDuplicate? :(id :number) => void) {
     if(!username) {
         msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
@@ -302,6 +342,29 @@ export async function toggleRoleDefault(roleId :number | null, onSuccess? :() =>
         await utils.concludeAndWait(loadingHandler);
         msg.displayMessageBox("Ha ocurrido un problema al actualizar el estatus del rol.", 'error');
         console.error(`Ha ocurrido un problema al actualizar el estatus del rol. Causa: ${e}`);
+    }
+}
+
+
+export async function updateRolePermissions(roleId :number | null, permissions :any) {
+    if(roleId == null) {
+        console.error("No hay rol seleccionado. No se actualizará nada.");
+        return;
+    }
+
+    let loadingHandler = msg.displayLoadingBox("Actualizando permisos del rol...");
+    try {
+        let data = await fetchRequest("/admin/role-update-permissions", "POST", {roleId, permissions});
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            msg.displayMessageBox("Permisos del rol actualizados.", 'success');
+        } else {
+            msg.displayMessageBox("No se ha podido actualizar los permisos del rol.", 'error');
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al actualizar los permisos del rol.", 'error');
+        console.error(`Ha ocurrido un problema al actualizar los permisos del rol. Causa: ${e}`);
     }
 }
 

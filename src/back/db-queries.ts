@@ -58,7 +58,7 @@ export async function getAcademicLevelDescription(id :number) {
 function mapOracleDBResult<T>(result :Result<T>) {
     let ret :any[] = [];
     for(let row of result.rows!) {
-        let rowMap :any = {};
+        let rowMap :{[k :string] :T} = {};
         // @ts-ignore row is always an Array of items but Oracle's type hinting disagrees
         let rowItems :T[] = row;
         for(let i = 0; i < rowItems.length; i++) {
@@ -261,7 +261,19 @@ export async function updateRoleName(id :number, newName :string) {
     } catch(e) {
         console.error(`Ha ocurrido un problema al renombrar el rol. Causa: ${e}`);
     }
+}
 
+
+export async function updateRolePermissions(id :number, permissions: any) {
+    try {
+        let encodedPermissions = utils.jsonToBuffer(permissions);
+        await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("ROLES")} SET entries='${encodedPermissions}' WHERE id=${id};
+        `);
+        console.log(`Se ha actualizado los permisos del rol ${id}`);
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al actualizar los permisos del rol. Causa: ${e}`);
+    }
 }
 
 
