@@ -127,12 +127,18 @@ export async function getDefaultRole() {
 
 
 export async function setDefaultRole(roleId :number) {
+    let roleNotFound = false;
+    if(await getRole(roleId) == null) {
+        roleNotFound = true;
+        return roleNotFound;
+    }
     await db.performQueryMySQL(`
         UPDATE ${db.profileTable("ROLES")} SET isDefault='F' WHERE isDefault='T';
     `);
     await db.performQueryMySQL(`
         UPDATE ${db.profileTable("ROLES")} SET isDefault='T' WHERE id=${roleId};
     `);
+    return roleNotFound;
 }
 
 
@@ -217,13 +223,27 @@ export async function deleteUser(id :number) {
 
 export async function updateUserUsername(id :number, newName :string) {
     try {
-        let result = await db.performQueryMySQL(`
+        await db.performQueryMySQL(`
             UPDATE ${db.profileTable("USERS")} SET username='${newName}' WHERE id=${id};
         `, true);
         console.log(`Cambiado usuario ${id} a ${newName}`);
         return {success: true as const};
     } catch(e) {
-        console.error(`Ha ocurrido un problema al cambiar el nombre el usuario. Causa: ${e}`);
+        console.error(`Ha ocurrido un problema al cambiar el nombre del usuario. Causa: ${e}`);
+        return {success: false as const};
+    }
+}
+
+
+export async function updateUserRole(userId :number, roleId :number) {
+    try {
+        await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("USERS")} SET role=${roleId} WHERE id=${userId};
+        `, true);
+        console.log(`Cambiado usuario ${userId} a rol ${roleId}`);
+        return {success: true as const};
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al cambiar el rol del usuario. Causa: ${e}`);
         return {success: false as const};
     }
 }
@@ -277,15 +297,74 @@ export async function updateRolePermissions(id :number, permissions: any) {
 }
 
 
-export async function deleteRole(id :number) {
+export async function getAllChildrenOfRole(id :number) {
+    let result = await db.performQueryMySQL(`
+        SELECT * FROM ${db.profileTable("ROLES")} WHERE parent=${id};
+    `) as Role[];
+    return result;
+}
+
+
+export async function updateRoleParent(id :number, parentId :number | null) {
+    let successWithoutCycles = false;
+    try {
+        if(parentId != null && await isRoleInParentChain(parentId, id)) {
+            successWithoutCycles = false;
+            throw new Error("Se crearía una dependencia cíclica entre roles.");
+        }
+        await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("ROLES")} SET parent=${parentId} WHERE id=${id};
+        `);
+        console.log(`Se ha actualizado la jerarquía del rol ${id}`);
+        successWithoutCycles = true;
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al actualizar la jerarquía del rol. Causa: ${e}`);
+    }
+    return successWithoutCycles;
+}
+
+
+export async function dissolveRoleParent(id :number) {
+    try {
+        await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("ROLES")} SET parent=(SELECT parent FROM ${db.profileTable("ROLES")} WHERE id=${id}) WHERE parent=${id};
+        `);
+        console.log(`Se ha actualizado la jerarquía del rol ${id}`);
+    } catch(e) {
+        console.error(`Ha ocurrido un problema al actualizar la jerarquía del rol. Causa: ${e}`);
+    }
+}
+
+
+export async function deleteRole(id :number, replaceWithRoleId :number | null) {
     try {
         await db.performQueryMySQL(`
             DELETE FROM ${db.profileTable("ROLES")} WHERE id=${id} AND isDefault='F';
         `, true);
         console.log(`Eliminado rol con id ${id}`);
+        if(db.getMySQLLastRowCount() > 0) {
+            await db.performQueryMySQL(`
+                UPDATE ${db.profileTable("USERS")} SET role=${replaceWithRoleId} WHERE role=${id};
+            `, true);
+        }
     } catch(e) {
         console.error(`Ha ocurrido un problema al eliminar el usuario. Causa: ${e}`);
     }
 }
 
 
+async function isRoleInParentChain(startingId :number, avoidingId :number) {
+    if(startingId == avoidingId) {
+        return true;
+    }
+    let current :number | null = startingId;
+    do {
+        let currentRole = await getRole(current) as Role;
+        let parent = currentRole!.parent;
+        if(parent == avoidingId) {
+            return true;
+        }
+        current = parent;
+    } while(current != null);
+    return false;
+}

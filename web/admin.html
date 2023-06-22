@@ -74,7 +74,7 @@
                                             </div>
                                             <div class="col-5">
                                                 <span id="user-field-role"></span>
-                                                <img id="user-field-role-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                                <img id="user-field-role-edit" src="icons/list.svg" class="cursor-hover pl-2">
                                             </div>
                                             <div class="col-12">
                                                 <small class="gray-text">
@@ -110,7 +110,7 @@
                                             </div>
                                             <div class="col-5">
                                                 <span id="role-field-parent"></span>
-                                                <img id="role-field-parent-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                                <img id="role-field-parent-edit" src="icons/list.svg" class="cursor-hover pl-2">
                                             </div>
                                             <div class="col-12">
                                                 <small class="gray-text">
@@ -125,7 +125,7 @@
                                             </div>
                                             <div class="col-5">
                                                 <span id="role-field-is-default"></span>
-                                                <img id="role-field-is-default-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                                <img id="role-field-is-default-edit" src="icons/arrow-repeat.svg" class="cursor-hover pl-2">
                                             </div>
                                             <div class="col-12">
                                                 <small class="gray-text">
@@ -140,7 +140,7 @@
                                             </div>
                                             <div class="col-5">
                                                 <span id="role-field-is-admin"></span>
-                                                <img id="role-field-is-admin-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                                <img id="role-field-is-admin-edit" src="icons/arrow-repeat.svg" class="cursor-hover pl-2">
                                             </div>
                                             <div class="col-12">
                                                 <small class="gray-text">
@@ -352,6 +352,48 @@
                     <div class="modal-footer">
                         <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                         <button id="modal-role-permissions-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-role-selector" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Seleccionar rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modal-role-selector-caption"></p>
+                        <input id="modal-role-selector-search-field" class="form-control my-1" placeholder="Buscar...">
+                        <div class="overflow-y vh-50">
+                            <table class="table table-sm h-0">
+                                <tbody id="modal-role-selector-table">
+                                    <!-- Will be filled in runtime -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="modal-role-selector-select-none" class="btn btn-link">Ninguno</button>
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-role-selector-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-delete-role" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Eliminar rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Se va a eliminar el rol <b><span id="modal-delete-role-selected-rolename"></span></b>.
+                            <span id="modal-delete-role-additional-info"></span> ¿Seguro?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn btn-secondary" data-dismiss="modal">Cancelar</div>
+                        <div id="modal-delete-role-confirm" class="btn btn-danger" data-dismiss="modal">Eliminar</div>
                     </div>
                 </div>
             </div>

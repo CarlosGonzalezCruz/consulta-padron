@@ -35,6 +35,34 @@ export async function findAuxAdmin(adminUsername :string = "admin") {
 }
 
 
+export async function dissolveParentPermissions(role :Role) {
+    let newPermissions :RolePermissions = {}
+    let parentRole = await db.getRole(role.parent);
+    let grandparentRole = parentRole != null ? await db.getRole(parentRole.parent) : null;
+
+    if(grandparentRole == null) {
+        newPermissions = await getEffectivePermissions(role);
+    } else {
+        let currentPermissions = utils.bufferToJson(role.entries) as RolePermissions;
+        let [ currentEffectivePermissions, grandparentPermissions ] = await Promise.all([
+            await getEffectivePermissions(role),
+            await getEffectivePermissions(grandparentRole)
+        ]);
+        for(let permission in currentPermissions) {
+            if(currentPermissions[permission] != null) {
+                newPermissions[permission] = currentPermissions[permission];
+            } else if(currentEffectivePermissions[permission] != grandparentPermissions[permission]) {
+                newPermissions[permission] = currentEffectivePermissions[permission];
+            } else {
+                newPermissions[permission] = null;
+            }
+        }
+    }
+
+    db.updateRolePermissions(role.id, newPermissions);
+}
+
+
 export async function getEffectivePermissions(role :Role, pendingKeys? :Set<string>) {
     if(pendingKeys == null) {
         pendingKeys = new Set(Array.from(inhabitant.getPermissionEntries()).map(e => e.permissionKey));
@@ -42,7 +70,7 @@ export async function getEffectivePermissions(role :Role, pendingKeys? :Set<stri
     let currentPermissions = utils.bufferToJson(role.entries);
     let ret :EffectiveRolePermissions = {};
     for(let key in currentPermissions) {
-        if(pendingKeys.has(key)) {
+        if(pendingKeys.has(key) && currentPermissions[key] != null) {
             ret[key] = currentPermissions[key];
             pendingKeys.delete(key);
         }
@@ -67,7 +95,7 @@ export async function getEffectivePermissions(role :Role, pendingKeys? :Set<stri
 export async function getDefaultRole() {
     let role = await db.getDefaultRole();
     if(role == null) {
-        await db.createRole("default", {full_name: true, is_registered: true});
+        await db.createRole("Predeterminado", {is_registered: true});
         role = await db.getDefaultRole();
     }
     return role!;

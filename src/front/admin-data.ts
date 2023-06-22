@@ -16,6 +16,8 @@ let searchTimeout :NodeJS.Timeout | null = null;
 let lastDefaultRole :number | null = null;
 let creatingChildRole = false;
 let selectedRoleInheritedPermissions :EffectiveRolePermissions = {};
+let roleSelectorActiveItem :number | null = null;
+let roleSelectorSearchTimeout :NodeJS.Timeout | null = null;
 
 export async function initialize() {
     await utils.documentReady();
@@ -29,6 +31,15 @@ export async function initialize() {
         $("#modal-update-username-input-field").val(selectedUsername);
         focusModalInputField($("#modal-update-username"));
         $("#modal-update-username").modal("show");
+    });
+    $("#user-field-role-edit").on("click", async () => {
+        let user = await adminFetch.fetchUser(selectedUser!);
+        await prepareRoleSelectorModal(`Seleccione el rol que tendrá el usuario <b>${selectedUsername}</b>.`, false, user?.role);
+        $("#modal-role-selector").modal("show");
+        waitForRoleSelectorModalConfirmation()
+        .then(async s => adminFetch.updateUserRole(selectedUser, s!))
+        .then(updateDetailsScreen)
+        .catch(() => {});
     });
     $("#user-button-delete").on("click", function() {
         if($(this).is(".disabled")) {
@@ -47,6 +58,11 @@ export async function initialize() {
         focusModalInputField($("#modal-create-role"));
         $("#modal-create-role").modal("show");
     });
+    $("#role-button-delete").on("click", function() {
+        if(!$(this).is(".disabled")) {
+            manageRoleDeletion();
+        }
+    })
     $("#role-button-permissions").on("click", async () => {
         await prepareRolePermissionsModal("Seleccione las entradas que los usuarios con este rol pueden consultar.");
         $("#modal-role-permissions").modal("show");
@@ -57,6 +73,16 @@ export async function initialize() {
         focusModalInputField($("#modal-update-rolename"));
         $("#modal-update-rolename").modal("show");
     });
+    $("#role-field-parent-edit").on("click", async () => {
+        let role = await adminFetch.fetchRole(selectedRole!);
+        await prepareRoleSelectorModal(`Seleccione el rol del que heredará los permisos el rol <b>${selectedRolename}</b>.`, true, role?.parent, [selectedRole!]);
+        $("#modal-role-selector").modal("show");
+        waitForRoleSelectorModalConfirmation()
+        .then(async s => adminFetch.updateRoleParent(selectedRole, s))
+        .then(updateDetailsScreen)
+        .catch(() => {});
+    });
+
     $("#role-field-is-admin-edit").on("click", async () => {
         await adminFetch.toggleRoleAdmin(selectedRole, $("#role-field-is-admin").attr("value") as DBBinary, selectRole);
     });
@@ -156,7 +182,7 @@ function entryMatchesFilter(entry :string) {
     if(!listFilter) {
         return true;
     } else {
-        return entry.includes(listFilter);
+        return entry.toLowerCase().includes(listFilter.toLowerCase());
     }
 }
 
@@ -385,7 +411,7 @@ async function prepareRolePermissionsModal(caption :string) {
         return;
     }
     $("#modal-role-permissions-rolename").text(selectedRolename);
-    $("#modal-role-permissions-caption").text(caption);
+    $("#modal-role-permissions-caption").html(caption);
 
     let template = $("#modal-role-permissions-table-row-template");
     $("#modal-role-permissions-table").children(":not(#modal-role-permissions-table-row-template)").remove();
@@ -459,4 +485,135 @@ function readSelectedPermissions(tableBody :JQuery<HTMLElement>) {
         ret[key!] = inherit ? null : allow;
     }
     return ret;
+}
+
+
+async function prepareRoleSelectorModal(caption :string, allowNone :boolean, defaultSelection? :number | null, excluding :number[] = []) {
+    if(defaultSelection !== undefined) {
+        roleSelectorActiveItem = defaultSelection;
+    }
+
+    $("#modal-role-selector-caption").html(caption);
+    if(allowNone) {
+        $("#modal-role-selector-select-none").removeClass("d-none");
+    } else {
+        $("#modal-role-selector-select-none").addClass("d-none");
+    }
+
+    let allRoles = await adminFetch.fetchAllRoles();
+    if(allRoles == null) {
+        return;
+    }
+    
+    allRoles = allRoles.filter(r => !excluding.includes(r.id));
+    generateRoleSelectorRows(allRoles);
+    enableRoleSelectorSearch(allRoles);
+}
+
+
+async function waitForRoleSelectorModalConfirmation() {
+    return new Promise<number | null>((resolve, reject) => {
+        let success = false;
+        $("#modal-role-selector-confirm").one("click", () => {
+            resolve(roleSelectorActiveItem)
+            $("#modal-role-selector").modal("hide");
+            success = true;
+        });
+        $("#modal-role-selector-select-none").one("click", () => {
+            resolve(null);
+            $("#modal-role-selector").modal("hide");
+            success = true;
+        });
+        $("#modal-role-selector").one("hidden.bs.modal", () => {if(!success) reject()});
+    });
+}
+
+
+function generateRoleSelectorRows(roles :Role[]) {
+    let tableBody = $("#modal-role-selector-table");
+    tableBody.children().remove();
+
+    for(let role of roles) {
+        let row = $("<tr>");
+        row.append($("<td>", {"role-id": role.id, class: roleSelectorActiveItem == role.id ? "active" : ""}).text(role.name));
+        row.find("td").on("click", function() {
+            let roleId = Number($(this).attr("role-id"));
+            if(roleSelectorActiveItem == roleId) {
+                $("#modal-role-selector-confirm").trigger("click");
+            } else {
+                roleSelectorActiveItem = Number($(this).attr("role-id"));
+                generateRoleSelectorRows(roles);
+            }
+        });
+        tableBody.append(row);
+    }
+}
+
+
+function enableRoleSelectorSearch(roles :Role[]) {
+    $("#modal-role-selector-search-field").off("input"); // Remove previous event
+    $("#modal-role-selector-search-field").val("");
+    $("#modal-role-selector-search-field").on("input", function() {
+        if(roleSelectorSearchTimeout != null) {
+            clearTimeout(roleSelectorSearchTimeout);
+        }
+        roleSelectorSearchTimeout = setTimeout(() => {
+            generateRoleSelectorRows(roles.filter(r => r.name.toLowerCase().includes(($(this).val() as string).toLowerCase())));
+            roleSelectorSearchTimeout = null;
+        }, SEARCH_TIMEOUT_MS);
+    });
+}
+
+
+async function manageRoleDeletion() {
+    if(selectedRole == null) {
+        return;
+    }
+
+    let usersWithRole = await adminFetch.fetchAllUsersWithRole(selectedRole);
+    if(usersWithRole == null) {
+        return;
+    }
+    let captionReferringUsers = "---";
+    if(usersWithRole.length == 1) {
+        captionReferringUsers = `el usuario <b>${usersWithRole[0].username}</b>, que actualmente posee este rol`;
+    } else if(usersWithRole.length > 1) {
+        captionReferringUsers = `los ${utils.displayNumberAsText(usersWithRole.length)} usuarios que actualmente poseen este rol`;
+    }
+
+    let replacementRole :number | null = null;
+    let replacementRolename :string = "";
+    if(usersWithRole.length != 0) {
+        try {
+            prepareRoleSelectorModal(`Seleccione un nuevo rol para ${captionReferringUsers}:`, false, null, [selectedRole]);
+            $("#modal-role-selector").modal("show");
+            replacementRole = await waitForRoleSelectorModalConfirmation();
+            replacementRolename = replacementRole != null ? (await adminFetch.fetchRole(replacementRole))?.name || "" : "";
+            await utils.wait(250);
+        } catch(e) { // User cancelled modal
+            replacementRole = null;
+            return;
+        }
+    } else {
+        replacementRole = null;
+    }
+
+    $("#modal-delete-role-selected-rolename").text(selectedRolename);
+    if(replacementRole != null) {
+        $("#modal-delete-role-additional-info").text(` Los usuarios que tenían este rol pasarán a tener el rol ${replacementRolename}.`);
+    } else {
+        $("#modal-delete-role-additional-info").text("");
+    }
+    $("#modal-delete-role").modal("show");
+    let success = false;
+    $("#modal-delete-role-confirm").one("click", async () => {
+        success = true;
+        await adminFetch.deleteRole(selectedRole, replacementRole);
+        selectRole(replacementRole);
+    });
+    $("#modal-delete-role").one("hidden.bs.modal", () => {
+        if(!success) {
+            $("#modal-delete-role-confirm").off("click"); // Clear so that it doesn't trigger the next time this modal appears
+        }
+    })
 }

@@ -123,14 +123,14 @@ const ENTRIES = [
 ];
 
 
-export async function generateEntriesFor(idDoc :string, allowedKeys :EffectiveRolePermissions) {
+export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
     if(Object.keys(allowedKeys).length == 0) {
         return {
             success: false as const,
             unauthorized: true
         };
     }
-    let selectedFields = ENTRIES.filter(e => e.permissionKey in allowedKeys).map(e => e.field).filter(utils.ensureNotNull);
+    let selectedFields = ENTRIES.filter(e => allowedKeys.contains(e.permissionKey)).map(e => e.field).filter(utils.ensureNotNull);
     let query = await db.getInhabitantByIdDoc(idDoc, selectedFields);
     if(query.length == 0) {
         return {
@@ -141,8 +141,8 @@ export async function generateEntriesFor(idDoc :string, allowedKeys :EffectiveRo
         return {
             success: true as const,
             idDoc: idDoc,
-            fullName: await calculateValues(query, {field: "HAB.NOMBRE_COMPLETO"}, "full_name" in allowedKeys),
-            entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query, e, e.permissionKey in allowedKeys)))
+            fullName: await calculateValues(query, {field: "HAB.NOMBRE_COMPLETO"}, allowedKeys.contains("full_name")),
+            entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query, e, allowedKeys.contains(e.permissionKey))))
         };
     }
 }

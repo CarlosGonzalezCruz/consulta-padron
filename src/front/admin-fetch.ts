@@ -191,7 +191,7 @@ export async function createNewUser(username :string, onSuccess? :(id :number) =
 
 export async function renameUser(userId :number | null, oldName :string, newName :string, onSuccess? :(id :number) => void) {
     if(userId == null) {
-        msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
+        console.error("No hay usuario seleccionado. No se actualizará nada.", 'error');
         return;
     }
     if(!newName) {
@@ -219,6 +219,29 @@ export async function renameUser(userId :number | null, oldName :string, newName
         await utils.concludeAndWait(loadingHandler);
         msg.displayMessageBox("Ha ocurrido un problema al actualizar el nombre del usuario.", 'error');
         console.error(`Ha ocurrido un problema al actualizar el nombre del usuario. Causa: ${e}`);
+    }
+}
+
+
+export async function updateUserRole(userId :number | null, roleId :number) {
+    if(userId == null) {
+        console.error("No hay usuario seleccionado. No se actualizará nada.", 'error');
+        return;
+    }
+
+    let loadingHandler = msg.displayLoadingBox("Cambiando rol de usuario...");
+    try {
+        let data = await fetchRequest("/admin/user-update-role", "POST", {userId, roleId});
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            return data.data;
+        } else {
+            msg.displayMessageBox("No se ha podido cambiar el rol al usuario.", 'error');
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al cambiar el rol al usuario.", 'error');
+        console.error(`Ha ocurrido un problema al cambiar el rol al usuario. Causa: ${e}`);
     }
 }
 
@@ -335,6 +358,8 @@ export async function toggleRoleDefault(roleId :number | null, onSuccess? :() =>
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             if(!!onSuccess) onSuccess();
+        } else if(data.missing) {
+            msg.displayMessageBox("El anterior rol predeterminado ya no existe.", 'error');
         } else {
             msg.displayMessageBox("No se ha podido actualizar el estatus del rol.", 'error');
         }
@@ -365,6 +390,53 @@ export async function updateRolePermissions(roleId :number | null, permissions :
         await utils.concludeAndWait(loadingHandler);
         msg.displayMessageBox("Ha ocurrido un problema al actualizar los permisos del rol.", 'error');
         console.error(`Ha ocurrido un problema al actualizar los permisos del rol. Causa: ${e}`);
+    }
+}
+
+
+export async function updateRoleParent(roleId :number | null, parentId :number | null) {
+    if(roleId == null) {
+        console.error("No hay rol seleccionado. No se actualizará nada.");
+        return;
+    }
+
+    let loadingHandler = msg.displayLoadingBox("Actualizando jerarquía de roles...");
+    try {
+        let data = await fetchRequest("/admin/role-update-parent", "POST", {roleId, parentId});
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            msg.displayMessageBox("Jerarquía de roles actualizada.", 'success');
+        } else if(data.cyclic) {
+            msg.displayMessageBox("Un rol no puede basarse en sí mismo, directa o indirectamente.", 'error');
+        } else {
+            msg.displayMessageBox("No se ha podido actualizar la jerarquía de roles.", 'error');
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al actualizar la jerarquía de roles.", 'error');
+        console.error(`Ha ocurrido un problema al actualizar la jerarquía de roles. Causa: ${e}`);
+    }
+}
+
+
+export async function deleteRole(roleId :number | null, replaceWithRoleId :number | null) {
+    if(roleId == null) {
+        console.error("No hay rol seleccionado. No se eliminará nada.");
+        return;
+    }
+    let loadingHandler = msg.displayLoadingBox("Eliminando rol...");
+    try {
+        let data = await fetchRequest("/admin/role", "DELETE", {roleId, replaceWithRoleId});
+        await utils.concludeAndWait(loadingHandler);
+        if(data.success) {
+            msg.displayMessageBox("Se ha eliminado el rol correctamente.", 'success');
+        } else {
+            msg.displayMessageBox("No se ha podido eliminar el rol.", 'error');
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox("Ha ocurrido un problema al eliminar el rol.", 'error');
+        console.error(`Ha ocurrido un problema al eliminar el rol. Causa: ${e}`);
     }
 }
 

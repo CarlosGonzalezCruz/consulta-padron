@@ -11,7 +11,6 @@ let oracledbCloseTimeout :NodeJS.Timeout | null;
 let sqlitedb :sqlite3.Database;
 
 let sqliteLastRowCount = 0;
-let sqliteLastInsertedId = -1;
 
 
 export function openMySQL() {
@@ -85,11 +84,6 @@ export function getMySQLLastRowCount() {
 }
 
 
-export function getMySQLLastInsertedId() {
-    return sqliteLastInsertedId;
-}
-
-
 export async function performQueryMySQL(query :string, updateMetaResults = false) :Promise<any> {
     return new Promise((resolve, reject) => {
         sqlitedb.all(query, (error, result :any) => {
@@ -98,8 +92,9 @@ export async function performQueryMySQL(query :string, updateMetaResults = false
                 reject(error);
             } else {
                 if(updateMetaResults) {
-                    sqliteLastRowCount = result.affectedRows;
-                    sqliteLastInsertedId = result.insertId;
+                    sqlitedb.all(`SELECT changes() AS CHANGES;`, (error :any, result :{CHANGES :number}[]) => {
+                        sqliteLastRowCount = result[0].CHANGES;
+                    });
                 }
                 resolve(result);
             }

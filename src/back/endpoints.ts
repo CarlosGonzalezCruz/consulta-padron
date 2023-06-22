@@ -89,8 +89,9 @@ endpoint("/inhabitant-data-id", "POST", async (request, result) => {
         result.send({success: false, expired: data.expired, unauthorized: false});
     } else {
         let userRole = await permissions.identify(data.data.username || data.data.user);
-        let allowedEntries = await permissions.getEffectivePermissions(userRole);
-        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id, allowedEntries)});
+        let effectivePermissions = await permissions.getEffectivePermissions(userRole);
+        let allowedKeys = Object.entries(effectivePermissions).filter(e => e[1]).map(e => e[0]);
+        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id, allowedKeys)});
     }
 });
 
@@ -103,7 +104,7 @@ endpoint("/admin/all-users", "POST", async (request, result) => {
     }
 });
 
-endpoint("/admin/user", "POST", async(request, result) => {
+endpoint("/admin/user", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
@@ -112,7 +113,7 @@ endpoint("/admin/user", "POST", async(request, result) => {
     }
 });
 
-endpoint("/admin/user-update-username", "POST", async(request, result) => {
+endpoint("/admin/user-update-username", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, duplicate: false, reserved: false});
@@ -128,6 +129,15 @@ endpoint("/admin/user-update-username", "POST", async(request, result) => {
         }
         await db.updateUserUsername(request.body.userId, request.body.newName);
         result.send({success: true, data: await db.getUser(request.body.userId)});
+    }
+});
+
+endpoint("/admin/user-update-role", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.updateUserRole(request.body.userId, request.body.roleId)});
     }
 });
 
@@ -232,10 +242,14 @@ endpoint("/admin/role-get-default", "POST", async (request, result) => {
 endpoint("/admin/role-set-default", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success || !data.data.isAdmin) {
-        result.send({success: false});
+        result.send({success: false, missing: false});
     } else {
-        await db.setDefaultRole(request.body.roleId);
-        result.send({success: true, data: await db.getDefaultRole()});
+        let roleNotFound = await db.setDefaultRole(request.body.roleId);
+        if(!roleNotFound) {
+            result.send({success: true, data: await db.getDefaultRole()});
+        } else {
+            result.send({success: false, missing: true});
+        }
     }
 });
 
@@ -269,6 +283,36 @@ endpoint("/admin/role-update-permissions", "POST", async (request, result) => {
         result.send({success: false});
     } else {
         await db.updateRolePermissions(request.body.roleId, request.body.permissions);
+        result.send({success: true});
+    }
+});
+
+endpoint("/admin/role-update-parent", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, cyclic: false});
+    } else {
+        let successWithoutCycles = await db.updateRoleParent(request.body.roleId, request.body.parentId);
+        if(successWithoutCycles) {
+            result.send({success: true});
+        } else {
+            result.send({success: false, cyclic: true});
+        }
+    }
+});
+
+endpoint("/admin/role", "DELETE", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        let parentPermissionsPromises :Promise<void>[] = [];
+        for (let role of await db.getAllChildrenOfRole(request.body.roleId)) {
+            parentPermissionsPromises.push(permissions.dissolveParentPermissions(role));
+        }
+        await Promise.all(parentPermissionsPromises);
+        await db.dissolveRoleParent(request.body.roleId);
+        await db.deleteRole(request.body.roleId, request.body.replaceWithRoleId);
         result.send({success: true});
     }
 });

@@ -41,22 +41,25 @@ export function setup(app :Express) {
         passwordField: "Password",
         session: true,
     }, (username, password, done) => {
-
         if(properties.get("Admin.enabled", true)) {
-            if(username == properties.get("Admin.username", null) && password == properties.get("Admin.password", null)) {
-                permissions.findAuxAdmin(properties.get<string>("Admin.username")).then(result => {
-                    if(result.success) {
-                        done(null, {
-                            username,
-                            token: jwt.sign({user: result.data.username, isAdmin: true}, ldapSecret, {expiresIn: ldapTimeout})
-                        });
-                    } else if(result.failedRename) {
-                        done(Error(`El nuevo nombre del administrador, "${properties.get("Admin.username")}", ya está en uso para otro usuario.`
-                            + " Cámbielo para poder utilizar la cuenta auxiliar de administrador."), false);
-                    } else {
-                        done(Error(`Ha ocurrido un error inesperado con la cuenta auxiliar del administrador.`), false);
-                    }
-                })
+            if(username == properties.get("Admin.username", null)) {
+                if(password == properties.get("Admin.password")) {
+                    permissions.findAuxAdmin(properties.get<string>("Admin.username")).then(result => {
+                        if(result.success) {
+                            done(null, {
+                                username,
+                                token: jwt.sign({user: result.data.username, isAdmin: true}, ldapSecret, {expiresIn: ldapTimeout})
+                            });
+                        } else if(result.failedRename) {
+                            done(Error(`El nuevo nombre del administrador, "${properties.get("Admin.username")}", ya está en uso para otro usuario.`
+                                + " Cámbielo para poder utilizar la cuenta auxiliar de administrador."), false);
+                        } else {
+                            done(Error(`Ha ocurrido un error inesperado con la cuenta auxiliar del administrador.`), false);
+                        }
+                    });
+                } else {
+                    done(Error("Invalid Credentials"), false);
+                }
                 return;
             }
         }
