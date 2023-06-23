@@ -84,7 +84,7 @@ export async function initialize() {
     });
 
     $("#role-field-is-admin-edit").on("click", async () => {
-        await adminFetch.toggleRoleAdmin(selectedRole, $("#role-field-is-admin").attr("value") as DBBinary, selectRole);
+        await adminFetch.toggleRoleAdmin(selectedRole, $("#role-field-is-admin").attr("value") as DBBinary, r => selectRole(r, false));
     });
     $("#role-field-is-default-edit").on("click", async () => {
         await toggleDefaultRole();
@@ -99,7 +99,7 @@ export async function initialize() {
     $("#modal-update-username-confirm").on("click", async function() {
         if(!$(this).is(".disabled")) {
             $("#modal-update-username").modal("hide");
-            await adminFetch.renameUser(selectedUser, selectedUsername, $("#modal-update-username-input-field").val() as string, selectUser);
+            await adminFetch.renameUser(selectedUser, selectedUsername, $("#modal-update-username-input-field").val() as string, u => selectUser(u, false));
         }
     });
     $("#modal-delete-user-confirm").on("click", async () => {
@@ -112,7 +112,7 @@ export async function initialize() {
     });
     $("#modal-update-rolename-confirm").on("click", async () => {
         $("#modal-update-rolename").modal("hide");
-        await adminFetch.renameRole(selectedRole, selectedRolename, $("#modal-update-rolename-input-field").val() as string, selectRole);
+        await adminFetch.renameRole(selectedRole, selectedRolename, $("#modal-update-rolename-input-field").val() as string, r => selectRole(r, false));
     });
     $("#modal-role-permissions-confirm").on("click", async () => {
         $("#modal-role-permissions").modal("hide");
@@ -123,13 +123,25 @@ export async function initialize() {
     $("#user-role-tabs li").on("click", function() {
         updateTabs($(this));
     });
-    updateTabs($("#user-role-tabs li[tab-content='users']"));
+    updateTabs($("#user-role-tabs li[tab-content='users']"), true);
 
     bindModalSubmitToInput($("#modal-create-user-input-field"), $("#modal-create-user-confirm"));
     bindModalSubmitToInput($("#modal-update-username-input-field"), $("#modal-update-username-confirm"));
     bindModalSubmitToInput($("#modal-create-role-input-field"), $("#modal-create-role-confirm"));
     bindModalSubmitToInput($("#modal-update-rolename-input-field"), $("#modal-update-rolename-confirm"));
     enableSearch();
+
+    window.addEventListener("popstate", e => {
+        if(e.state == null) {
+            history.back();
+        }
+        let category = e.state?.category as typeof listCategory;
+        if(category == "users") {
+            selectUser(e.state!.selected, false);
+        } else if(category == "roles") {
+            selectRole(e.state!.selected, false);
+        }
+    });
 }
 
 
@@ -188,14 +200,12 @@ function entryMatchesFilter(entry :string) {
 
 
 function assignUserItemClickEvent(elem :JQuery) {
-    elem.on("click", function() {
+    elem.on("click", function() { 
         if(listCategory == "users") {
-            selectedUser = Number($(this).attr("user-id"));
+            selectUser(Number($(this).attr("user-id")));
         } else {
-            selectedRole = Number($(this).attr("role-id"));
+            selectRole(Number($(this).attr("role-id")));
         }
-        updateSelectedItem();
-        updateDetailsScreen();
     });
 }
 
@@ -231,7 +241,7 @@ async function updateDetailsScreen() {
                 selectedUsername = "";
             } else {
                 $("#user-field-username").text(userData.username);
-                $("#user-field-role").text(userData.name);
+                $("#user-field-role").text(userData.name).off("click").one("click", () => selectRole(userData!.role));
                 selectedUsername = userData.username;
                 updateDetailsScreenForAuxAdmin(userData.isAuxiliar == 'T');
             }
@@ -276,9 +286,12 @@ async function updateDetailsScreen() {
                     adminFetch.fetchRole(roleData.parent),
                     adminFetch.fetchAllUsersWithRole(selectedRole)
                 ]);
-                $("#role-field-user-amount").text(displayUsersWithRole(usersWithRole!));
+                displayUsersWithRole(usersWithRole!, $("#role-field-user-amount"));
                 if(parentRoleData != null) {
-                    $("#role-field-parent").text(parentRoleData.name);
+                    let parentRoleLink = $("<a>", {"href": "javascript:"});
+                    parentRoleLink.text(parentRoleData.name);
+                    parentRoleLink.one("click", () => selectRole(parentRoleData!.id));
+                    $("#role-field-parent").append(parentRoleLink);
                 } else {
                     $("#role-field-parent").html("<span class='text-muted'>Ninguno</span>")
                 }
@@ -289,15 +302,24 @@ async function updateDetailsScreen() {
 }
 
 
-function displayUsersWithRole(users :{id :number, username :string}[]) {
+function displayUsersWithRole(users :{id :number, username :string}[], elem :JQuery<HTMLElement>) {
+    elem.children().remove();
     if(users.length == 0 || users.length >= 10) {
-        return users.length.toString();
+        elem.text(users.length);
     } else {
         let text = users.map(u => u.username).join(", ");
         if(text.length > 50) {
-            return users.length.toString();
+            elem.text(users.length);
         } else {
-            return text;
+            for(let i = 0; i < users.length; i++) {
+                let userLink = $("<a>", {href: "javascript:"});
+                userLink.text(users[i].username);
+                userLink.one("click", () => selectUser(users[i].id));
+                elem.append(userLink);
+                if(i < users.length - 1) {
+                    elem.append(", ");
+                }
+            } 
         }
     }
 }
@@ -316,7 +338,8 @@ function updateDetailsScreenForAuxAdmin(isAuxAdmin :boolean) {
 }
 
 
-async function updateTabs(clickedTab :JQuery) {
+async function updateTabs(clickedTab :JQuery, saveHistory = true) {
+    
     $("#user-role-tabs li").removeClass("active");
     clickedTab.addClass("active");
     listCategory = $(clickedTab).attr("tab-content") as "users" | "roles";
@@ -328,11 +351,15 @@ async function updateTabs(clickedTab :JQuery) {
         $("#user-button-create").addClass("d-none");
         $("#role-button-create").removeClass("d-none");
     }
-
+    
     await Promise.all([
         updateDetailsScreen(),
         populateList().then(updateSelectedItem)
     ]);
+
+    if(saveHistory) {
+        history.pushState({category: listCategory, selected: listCategory == "users" ? selectedUser : selectedRole}, '');
+    }
 }
 
 
@@ -360,23 +387,15 @@ function bindModalSubmitToInput(inputField :JQuery, submitButton :JQuery) {
 }
 
 
-async function selectUser(userId :number | null) {
+async function selectUser(userId :number | null, saveHistory = true) {
     selectedUser = userId;
-    await Promise.all([
-        updateDetailsScreen(),
-        populateList()
-    ]);
-    updateSelectedItem();
+    updateTabs($("#user-role-tabs li[tab-content='users']"), saveHistory);
 }
 
 
-async function selectRole(roleId :number | null) {
+async function selectRole(roleId :number | null, saveHistory = true) {
     selectedRole = roleId;
-    await Promise.all([
-        updateDetailsScreen(),
-        populateList()
-    ]);
-    updateSelectedItem();
+    updateTabs($("#user-role-tabs li[tab-content='roles']"), saveHistory);
 }
 
 
@@ -384,9 +403,9 @@ async function toggleDefaultRole() {
     let currentDefault = await adminFetch.fetchDefaultRole();
     if(!!currentDefault && currentDefault.id != selectedRole) {
         lastDefaultRole = currentDefault.id;
-        await adminFetch.toggleRoleDefault(selectedRole, () => selectRole(selectedRole));
+        await adminFetch.toggleRoleDefault(selectedRole, () => selectRole(selectedRole, false));
     } else if(lastDefaultRole != null) {
-        await adminFetch.toggleRoleDefault(lastDefaultRole, () => selectRole(selectedRole));
+        await adminFetch.toggleRoleDefault(lastDefaultRole, () => selectRole(selectedRole, false));
     }
 }
 

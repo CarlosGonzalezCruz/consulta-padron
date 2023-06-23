@@ -55,8 +55,11 @@ export function addModalButtonKeybinding() {
 
 export function playCssAnimationOnce(jQueryElement :JQuery<HTMLElement>, cssClass :string) {
     return new Promise<void>(resolve => {
-        jQueryElement.addClass(cssClass).one("animationend", function() {
-            $(this).removeClass(cssClass);
+        if(!jQueryElement.hasClass(cssClass)) {
+            jQueryElement.addClass(cssClass);
+        }
+        jQueryElement.one("animationend", function() {
+            jQueryElement.removeClass(cssClass);
             resolve();
         });
     })
