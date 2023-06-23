@@ -27,9 +27,22 @@
     min-height: 50vh !important;
 }
 
+.min-h-px-40 {
+    min-height: 40px !important;
+}
+
 .w-15 {
     width: 15% !important;
     min-width: 15% !important;
+}
+
+.fixed-w-300 {
+    width: 300px;
+}
+
+.vh-50 {
+    height: 50vh;
+    min-height: 50vh;
 }
 
 @media (min-width: 768px) {
@@ -37,10 +50,18 @@
         width: 80% !important;
         min-width: 80%;
     }
+
+    .fixed-w-md-200 {
+        width: 200px;
+        min-width: 200px;
+    }
 }
 
-.fixed-w-300 {
-    width: 300px;
+@media (min-width: 992px) {
+    .fixed-w-lg-300 {
+        width: 300px;
+        min-width: 300px;
+    }
 }
 
 .adjust-to-screen {
@@ -99,7 +120,7 @@
     color: black;
 }
 
-.btn:active {
+.btn:active:not(.disabled):not(.btn-link) {
     background-color: black;
 }
 
@@ -108,8 +129,16 @@
 }
 
 .list-group-item-action:hover,
-.btn-link:hover {
+.btn-link:hover:not(.active) {
     cursor: pointer;
+}
+
+.cursor-hover:hover {
+    cursor: pointer;
+}
+
+.list-group-item-action:hover:not(.active) {
+    background-color: rgb(240, 240, 240);
 }
 
 .svg-inverted-color {
@@ -138,6 +167,24 @@
     font-size: small;
 }
 
+.not-allowed-indicator {
+    background-color: rgb(248, 229, 218);
+    border-radius: 5px;
+    display: inline-block;
+    width: 15em !important;
+    text-align: center;
+    color: rgb(129, 112, 101);
+    font-size: small;
+}
+
+.missing-full-name {
+    color: gray;
+}
+
+small.gray-text {
+    color: rgb(196, 196, 196);
+}
+
 .login-title {
     color: rgb(196, 196, 196);
     font-variant: small-caps;
@@ -151,11 +198,38 @@
     color:rgb(255, 36, 36);
 }
 
+.admin-title {
+    color: rgb(196, 196, 196);
+    font-variant: small-caps;
+    text-transform: capitalize;
+    text-align: right;
+    width: 100%;
+    letter-spacing: 0.5rem;
+}
+
 #inhabitant-data-table td:first-child {
     text-align: right;
     font-weight: bold;
     padding-right: 10%;
     width: 40%;
+}
+
+#user-role-list td:not(.active):hover,
+#modal-role-selector-table td:not(.active):hover {
+    cursor: pointer;
+    background: rgb(250, 250, 250);
+    border-radius: 5px;
+}
+
+#user-role-list .active,
+#modal-role-selector-table .active {
+    background: rgb(220, 220, 220);
+    border-radius: 5px;
+}
+
+
+#modal-role-selector-table .active {
+    cursor: pointer;
 }
 
 

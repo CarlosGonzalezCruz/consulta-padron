@@ -31,7 +31,7 @@ declare type IdDocData = {
 
 
 export function processIdDocument(idDoc :string) :IdDocData {
-    let ret :any = {
+    let ret :IdDocData = {
         original: idDoc,
         valid: false,
         foreign: null,
@@ -39,6 +39,7 @@ export function processIdDocument(idDoc :string) :IdDocData {
         control: null,
         queryDigits: null,
         expectedControl: null,
+        display: null,
         error: false
     };
 
@@ -60,7 +61,7 @@ export function processIdDocument(idDoc :string) :IdDocData {
             }
     
             let effectiveValue = Number(nationalDigits);
-            if(!!foreign) {
+            if(!!foreign && !!ret.foreign) {
                 effectiveValue = effectiveForeignIdValue(ret.foreign, foreignDigits);
             }
             let expectedControl = calculateIdControlCharacter(effectiveValue);
@@ -69,11 +70,11 @@ export function processIdDocument(idDoc :string) :IdDocData {
             
             if(!!control) {
                 if(ret.expectedControl == ret.control) {
-                    ret.valid = true;
+                    (ret as any).valid = true;
                 } // else it's not valid
             } else {
                 ret.control = expectedControl;
-                ret.valid = true;
+                (ret as any).valid = true;
             }
             ret.display = ( !!ret.foreign ? ret.foreign : "" ) + ret.digits + ret.control;
         }

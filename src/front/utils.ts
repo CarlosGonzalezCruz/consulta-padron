@@ -5,6 +5,11 @@ export function concludeAndWait(loadingHandler :{ conclude :(then? :() => void) 
 }
 
 
+export async function wait(timeMs :number) {
+    return new Promise<void>(r => setTimeout(r, timeMs));
+}
+
+
 export function setCursorLoadingState(state :boolean) {
     if(state) {
         $("body").css("cursor", "progress");
@@ -50,8 +55,11 @@ export function addModalButtonKeybinding() {
 
 export function playCssAnimationOnce(jQueryElement :JQuery<HTMLElement>, cssClass :string) {
     return new Promise<void>(resolve => {
-        jQueryElement.addClass(cssClass).one("animationend", function() {
-            $(this).removeClass(cssClass);
+        if(!jQueryElement.hasClass(cssClass)) {
+            jQueryElement.addClass(cssClass);
+        }
+        jQueryElement.one("animationend", function() {
+            jQueryElement.removeClass(cssClass);
             resolve();
         });
     })
@@ -66,9 +74,27 @@ export async function displayProfileEnvironmentLabel() {
 }
 
 
+export function displayNumberAsText(value :number) {
+    if(value < 0 || value > 9) {
+        return value.toString();
+    } else {
+        return ["cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"][value];
+    }
+}
+
+
 export function enforceDigits(value :string | number, minDigits :number) {
     if(typeof value != "string") {
         value = value.toString();
     }
     return "0".repeat(Math.max(minDigits - value.length, 0)) + value;
+}
+
+
+export function writeBoolean(value :Boolean | DBBinary | null) {
+    if(value == null) {
+        return null;
+    } else {
+        return (value == true || value == 'T') ? "Sí" : "No";
+    }
 }

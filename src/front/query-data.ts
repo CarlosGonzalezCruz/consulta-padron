@@ -25,7 +25,7 @@ export async function enableSearch() {
             queryAndPopulatePage(e.state.id, false);
         } else {
             $("#inhabitant-id-field").val("");
-            makeTableVisible(false, true);
+            makeTableVisible(false, $("#default-placeholder"));
         }
     });
 }
@@ -43,13 +43,19 @@ export async function enableTabs() {
 export async function enableSessionLinks() {
     await utils.documentReady();
 
+    if(await isCurrentUserAdmin()) {
+        $("#admin-link").removeClass("d-none");
+        $("#admin-link").on("click", () => {
+            window.location.href = "/admin";
+        });
+    }
     $("#session-logout").on("click", () => {
         doLogout();
     });
 }
 
 
-async function doLogout() {
+export async function doLogout() {
     if(!session.exists()) {
         return;
     }
@@ -72,7 +78,7 @@ async function doLogout() {
     } catch(e) {
         await utils.concludeAndWait(loadingHandler);
         console.error(`Ha ocurrido un problema al cerrar sesión. Causa: ${e}`);
-        msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión.", 'error');
+        window.location.href = "/login";
     }
 }
 
@@ -114,15 +120,19 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
         if(saveHistory) {
             history.pushState({id: processedId.display}, '');
         }
-        if(!result.data) {
-            await utils.concludeAndWait(loadingHandler);
-            $("#not-found-placeholder-id-number").text(processedId.display);
+
+        await utils.concludeAndWait(loadingHandler);
+        if(!result.data.success) {
             $("#inhabitant-tabs li").removeClass("active");
-            makeTableVisible(false);
+            if(result.data.unauthorized) {
+                makeTableVisible(false, $("#unauthorized-placeholder"));
+            } else {
+                $("#not-found-placeholder-id-number").text(processedId.display);
+                makeTableVisible(false, $("#not-found-placeholder"));
+            }
         } else {
-            await utils.concludeAndWait(loadingHandler);
             lastResult = result.data;
-            $("#inhabitant-name").text(lastResult.fullName);
+            displayFullName(lastResult.fullName);
             updateTableAndTabs($("#inhabitant-tabs li[tab-content='overview']"));
             makeTableVisible(true);
         }
@@ -130,6 +140,19 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
         await utils.concludeAndWait(loadingHandler);
         msg.displayMessageBox("Ha ocurrido un problema al conectar con el servidor.", 'error');
         throw Error(`Ha ocurrido un problema al conectar con el servidor. Causa: ${e}`);
+    }
+}
+
+
+function displayFullName(fullNameEntry :any) {
+    if(fullNameEntry.allowed) {
+        if(!!fullNameEntry.value) {
+            $("#inhabitant-name").text(fullNameEntry.displayValue);
+        } else {
+            $("#inhabitant-name").html("<small class='missing-full-name'>No hay datos del nombre</small>");
+        }
+    } else {
+        $("#inhabitant-name").html("<small class='missing-full-name'>Sin autorización para ver el nombre</small>");
     }
 }
 
@@ -145,6 +168,17 @@ async function fetchInhabitantDataByNationalId(id :string) {
     let fetchResult = await fetch("/inhabitant-data-id", fetchInit);
     let data = await fetchResult.json();
     return data;
+}
+
+
+async function isCurrentUserAdmin() {
+    let fetchResult = await fetch("/am-i-admin", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include"
+    });
+    let data = await fetchResult.json();
+    return !!data.admin;
 }
 
 
@@ -179,7 +213,7 @@ function populateTable(entries :any[]) {
 }
 
 
-function makeTableVisible(visible :boolean, displayDefault :boolean = false) {
+function makeTableVisible(visible :boolean, placeholderScreen :JQuery | null = null) {
     utils.playCssAnimationOnce($("#inhabitant-data-container"), "fade-in");
 
     if(visible) {
@@ -188,17 +222,13 @@ function makeTableVisible(visible :boolean, displayDefault :boolean = false) {
         $("#inhabitant-data").addClass("d-flex");
         $("#inhabitant-data").removeClass("d-none");
         $("#inhabitant-tabs li").removeClass("disabled");
-    } else if(displayDefault) {
-        $("#inhabitant-data-container .placeholder").addClass("d-none");
-        $("#inhabitant-data-container .placeholder").removeClass("d-flex");
-        $("#default-placeholder").addClass("d-flex");
-        $("#inhabitant-data").removeClass("d-flex");
-        $("#inhabitant-data").addClass("d-none");
-        $("#inhabitant-tabs li").addClass("disabled");
     } else {
+        if(placeholderScreen == null) {
+            placeholderScreen = $("#not-found-placeholder");
+        }
         $("#inhabitant-data-container .placeholder").addClass("d-none");
         $("#inhabitant-data-container .placeholder").removeClass("d-flex");
-        $("#not-found-placeholder").addClass("d-flex");
+        placeholderScreen.addClass("d-flex");
         $("#inhabitant-data").removeClass("d-flex");
         $("#inhabitant-data").addClass("d-none");
         $("#inhabitant-tabs li").addClass("disabled");

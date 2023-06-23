@@ -3,6 +3,8 @@ import https from "https";
 import express from "express";
 import * as inhabitant from "./inhabitant-data.js"
 import * as properties from "./properties.js";
+import * as permissions from "./permissions.js";
+import * as db from "./db-queries.js";
 import * as login from "./login.js";
 import * as utils from "./utils.js";
 
@@ -56,6 +58,10 @@ endpoint('/query', "GET", (request, result) => {
     result.sendFile("query.html", {root: "web"});
 });
 
+endpoint('/admin', "GET", (request, result) => {
+    result.sendFile("admin.html", {root: "web"});
+});
+
 endpoint('/environment-label', "GET", (request, result) => {
     result.send(properties.get("Application.environment-label", ""));
 });
@@ -68,24 +74,263 @@ endpoint("/logout", "POST", (request, result) => {
     login.tryLogout(request, result);
 });
 
+endpoint("/am-i-admin", "POST", (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success) {
+        result.send({admin: false});
+    } else {
+        result.send({admin: data.data.isAdmin});
+    }
+})
+
 endpoint("/inhabitant-data-id", "POST", async (request, result) => {
     let data = login.getSessionData(request);
     if(!data.success) {
-        result.send({success: false, expired: data.expired});
+        result.send({success: false, expired: data.expired, unauthorized: false});
     } else {
-        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id)});
+        let userRole = await permissions.identify(data.data.username || data.data.user);
+        let effectivePermissions = await permissions.getEffectivePermissions(userRole);
+        let allowedKeys = Object.entries(effectivePermissions).filter(e => e[1]).map(e => e[0]);
+        result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id, allowedKeys)});
+    }
+});
+
+endpoint("/admin/all-users", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getAllUsers()});
+    }
+});
+
+endpoint("/admin/user", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getUserRole(request.body.userId)});
+    }
+});
+
+endpoint("/admin/user-update-username", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, duplicate: false, reserved: false});
+    } else {
+        if(request.body.newName == properties.get("Admin.username", null)) {
+            result.send({success: false, duplicate: false, reserved: true});
+            return;
+        }
+        let oldUser = await db.getUserByUsername(request.body.newName);
+        if(oldUser != null) {
+            result.send({success: false, duplicate: true, reserved: false});
+            return;
+        }
+        await db.updateUserUsername(request.body.userId, request.body.newName);
+        result.send({success: true, data: await db.getUser(request.body.userId)});
+    }
+});
+
+endpoint("/admin/user-update-role", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.updateUserRole(request.body.userId, request.body.roleId)});
+    }
+});
+
+endpoint("/admin/user", "PUT", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, duplicate: false});
+    } else {
+        let existingUser = await db.getUserByUsername(request.body.username);
+        if(existingUser != null) {
+            result.send({success: false, duplicate: true, id: existingUser.id});
+            return;
+        }
+        try {
+            await db.createUser(request.body.username, (await db.getDefaultRole())!.id);
+            let newUser = await db.getUserByUsername(request.body.username);
+            result.send({success: true, user: newUser});
+        } catch(e) {
+            result.send({success: false, duplicate: false});
+        }
+    }
+});
+
+endpoint("/admin/user", "DELETE", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        db.deleteUser(request.body.userId);
+        result.send({success: true});
+    }
+});
+
+endpoint("/admin/all-roles", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getAllRoles()});
+    }
+});
+
+endpoint("/admin/role", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getRole(request.body.roleId)});
+    }
+});
+
+endpoint("/admin/role", "PUT", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        await db.createRole(request.body.rolename, {}, request.body.parentId ?? null);
+        let createdRole = await db.getLastCreatedRole();
+        result.send({success: true, role: createdRole});
+    }
+});
+
+endpoint("/admin/role-update-name", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        await db.updateRoleName(request.body.roleId, request.body.newName);
+        result.send({success: true, data: await db.getRole(request.body.roleId)});
+    }
+});
+
+endpoint("/admin/users-by-role", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getAllUsersWithRole(request.body.roleId)});
+    }
+});
+
+endpoint("/admin/role-update-admin", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        await db.setAdminRole(request.body.roleId, request.body.isAdmin);
+        result.send({success: true, data: await db.getRole(request.body.roleId)});
+    }
+});
+
+endpoint("/admin/role-get-default", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: await db.getDefaultRole()});
     }
 });
 
 
-async function endpoint(uri :string, rest :"GET" | "POST", callback :(request :any, result :any) => any) {
+endpoint("/admin/role-set-default", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, missing: false});
+    } else {
+        let roleNotFound = await db.setDefaultRole(request.body.roleId);
+        if(!roleNotFound) {
+            result.send({success: true, data: await db.getDefaultRole()});
+        } else {
+            result.send({success: false, missing: true});
+        }
+    }
+});
+
+endpoint("/admin/permission-entries", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        result.send({success: true, data: Array.from(inhabitant.getPermissionEntries())});
+    }
+});
+
+endpoint("/admin/get-role-effective-permissions", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        let role = await db.getRole(request.body.roleId);
+        if(role == null) {
+            result.send({success: true, data: []});
+        } else {
+            let effectivePermissions = await permissions.getEffectivePermissions(role);
+            result.send({success: true, data: effectivePermissions});
+        }
+    }
+});
+
+endpoint("/admin/role-update-permissions", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        await db.updateRolePermissions(request.body.roleId, request.body.permissions);
+        result.send({success: true});
+    }
+});
+
+endpoint("/admin/role-update-parent", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false, cyclic: false});
+    } else {
+        let successWithoutCycles = await db.updateRoleParent(request.body.roleId, request.body.parentId);
+        if(successWithoutCycles) {
+            result.send({success: true});
+        } else {
+            result.send({success: false, cyclic: true});
+        }
+    }
+});
+
+endpoint("/admin/role", "DELETE", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success || !data.data.isAdmin) {
+        result.send({success: false});
+    } else {
+        let parentPermissionsPromises :Promise<void>[] = [];
+        for (let role of await db.getAllChildrenOfRole(request.body.roleId)) {
+            parentPermissionsPromises.push(permissions.dissolveParentPermissions(role));
+        }
+        await Promise.all(parentPermissionsPromises);
+        await db.dissolveRoleParent(request.body.roleId);
+        await db.deleteRole(request.body.roleId, request.body.replaceWithRoleId);
+        result.send({success: true});
+    }
+});
+
+async function endpoint(uri :string, rest :RequestMethod, callback :(request :any, result :any) => any) {
     await utils.passportReady();
     switch(rest) {
         case "GET":
             APP.get(uri, callback);
             break;
+        case "PUT":
+            APP.put(uri, callback);
+            break;
         case "POST":
             APP.post(uri, callback);
+            break;
+        case "DELETE":
+            APP.delete(uri, callback);
             break;
     }
 }

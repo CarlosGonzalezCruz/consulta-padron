@@ -11,7 +11,6 @@ let oracledbCloseTimeout :NodeJS.Timeout | null;
 let sqlitedb :sqlite3.Database;
 
 let sqliteLastRowCount = 0;
-let sqliteLastInsertedId = -1;
 
 
 export function openMySQL() {
@@ -85,11 +84,6 @@ export function getMySQLLastRowCount() {
 }
 
 
-export function getMySQLLastInsertedId() {
-    return sqliteLastInsertedId;
-}
-
-
 export async function performQueryMySQL(query :string, updateMetaResults = false) :Promise<any> {
     return new Promise((resolve, reject) => {
         sqlitedb.all(query, (error, result :any) => {
@@ -98,9 +92,9 @@ export async function performQueryMySQL(query :string, updateMetaResults = false
                 reject(error);
             } else {
                 if(updateMetaResults) {
-                    sqliteLastRowCount = result.affectedRows;
-                    console.info(`Last row count updated to ${sqliteLastRowCount}`)
-                    sqliteLastInsertedId = result.insertId;
+                    sqlitedb.all(`SELECT changes() AS CHANGES;`, (error :any, result :{CHANGES :number}[]) => {
+                        sqliteLastRowCount = result[0].CHANGES;
+                    });
                 }
                 resolve(result);
             }
@@ -167,7 +161,16 @@ async function initTables() {
             try {
                 await performQueryMySQL(`
                     CREATE TABLE ${rolesTable} (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT,
+                        isDefault VARCHAR(1) NOT NULL DEFAULT 'F',
+                        isAdmin VARCHAR(1) NOT NULL DEFAULT 'F',
+                        parent INTEGER,
+                        entries BLOB,
+                        CHECK(isDefault IN ('T', 'F')),
+                        CHECK(isAdmin IN ('T', 'F')),
+                        FOREIGN KEY(parent)
+                            REFERENCES ${rolesTable}(id)
                     );
                 `);
                 console.log(`Tabla ${rolesTable} creada en MySQL.`);
@@ -179,7 +182,13 @@ async function initTables() {
             try {
                 await performQueryMySQL(`
                     CREATE TABLE ${usersTable} (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE,
+                        role INTEGER,
+                        isAuxiliar VARCHAR(1) NOT NULL DEFAULT 'F',
+                        CHECK(isAuxiliar IN ('T', 'F'))
+                        FOREIGN KEY(role)
+                            REFERENCES ${rolesTable}(id)
                     );
                 `);
                 console.log(`Tabla ${usersTable} creada en MySQL.`);
