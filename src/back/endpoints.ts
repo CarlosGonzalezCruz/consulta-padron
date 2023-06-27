@@ -6,6 +6,7 @@ import * as properties from "./properties.js";
 import * as permissions from "./permissions.js";
 import * as db from "./db-queries.js";
 import * as login from "./login.js";
+import * as validation from "./validation.js";
 import * as utils from "./utils.js";
 
 
@@ -88,6 +89,10 @@ endpoint("/inhabitant-data-id", "POST", async (request, result) => {
     if(!data.success) {
         result.send({success: false, expired: data.expired, unauthorized: false});
     } else {
+        if(!validation.check(request.body.id, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false, expired: false, unauthorized: false});
+            return;
+        }
         let userRole = await permissions.identify(data.data.username || data.data.user);
         let effectivePermissions = await permissions.getEffectivePermissions(userRole);
         let allowedKeys = Object.entries(effectivePermissions).filter(e => e[1]).map(e => e[0]);
@@ -109,6 +114,10 @@ endpoint("/admin/user", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.userId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         result.send({success: true, data: await db.getUserRole(request.body.userId)});
     }
 });
@@ -118,6 +127,11 @@ endpoint("/admin/user-update-username", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, duplicate: false, reserved: false});
     } else {
+        if(!validation.check(request.body.newName, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC).success ||
+           !validation.check(request.body.userId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false, duplicate: false, reserved: false});
+            return;
+        }
         if(request.body.newName == properties.get("Admin.username", null)) {
             result.send({success: false, duplicate: false, reserved: true});
             return;
@@ -137,6 +151,11 @@ endpoint("/admin/user-update-role", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.userId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
+           !validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false, expired: false, unauthorized: false});
+            return;
+        }
         result.send({success: true, data: await db.updateUserRole(request.body.userId, request.body.roleId)});
     }
 });
@@ -146,6 +165,10 @@ endpoint("/admin/user", "PUT", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, duplicate: false});
     } else {
+        if(!validation.check(request.body.username, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC).success) {
+            result.send({success: false});
+            return;
+        }
         let existingUser = await db.getUserByUsername(request.body.username);
         if(existingUser != null) {
             result.send({success: false, duplicate: true, id: existingUser.id});
@@ -166,6 +189,10 @@ endpoint("/admin/user", "DELETE", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.userId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         db.deleteUser(request.body.userId);
         result.send({success: true});
     }
@@ -185,6 +212,10 @@ endpoint("/admin/role", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         result.send({success: true, data: await db.getRole(request.body.roleId)});
     }
 });
@@ -194,6 +225,11 @@ endpoint("/admin/role", "PUT", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.rolename, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC_WITH_SPACES).success ||
+           !validation.check(request.body.parentId, validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         await db.createRole(request.body.rolename, {}, request.body.parentId ?? null);
         let createdRole = await db.getLastCreatedRole();
         result.send({success: true, role: createdRole});
@@ -205,6 +241,11 @@ endpoint("/admin/role-update-name", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
+           !validation.check(request.body.newName, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC_WITH_SPACES).success) {
+            result.send({success: false});
+            return;
+        }
         await db.updateRoleName(request.body.roleId, request.body.newName);
         result.send({success: true, data: await db.getRole(request.body.roleId)});
     }
@@ -215,6 +256,10 @@ endpoint("/admin/users-by-role", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         result.send({success: true, data: await db.getAllUsersWithRole(request.body.roleId)});
     }
 });
@@ -224,6 +269,11 @@ endpoint("/admin/role-update-admin", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
+           !validation.check(request.body.isAdmin, validation.Flags.NOT_NULL | validation.Flags.IS_BOOLEAN).success) {
+            result.send({success: false});
+            return;
+        }
         await db.setAdminRole(request.body.roleId, request.body.isAdmin);
         result.send({success: true, data: await db.getRole(request.body.roleId)});
     }
@@ -244,6 +294,10 @@ endpoint("/admin/role-set-default", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, missing: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false, missing: false});
+            return;
+        }
         let roleNotFound = await db.setDefaultRole(request.body.roleId);
         if(!roleNotFound) {
             result.send({success: true, data: await db.getDefaultRole()});
@@ -267,6 +321,10 @@ endpoint("/admin/get-role-effective-permissions", "POST", async (request, result
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         let role = await db.getRole(request.body.roleId);
         if(role == null) {
             result.send({success: true, data: []});
@@ -282,6 +340,11 @@ endpoint("/admin/role-update-permissions", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
+           !validation.check(request.body.permissions, validation.Flags.NOT_NULL | validation.Flags.IS_OBJECT | validation.Flags.PERMISSION_FORMAT_COMPLIANT).success) {
+            result.send({success: false});
+            return;
+        }
         await db.updateRolePermissions(request.body.roleId, request.body.permissions);
         result.send({success: true});
     }
@@ -292,6 +355,11 @@ endpoint("/admin/role-update-parent", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, cyclic: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
+           !validation.check(request.body.parentId, validation.Flags.IS_NUMBER).success) {
+            result.send({success: false, cyclic: false});
+            return;
+        }
         let successWithoutCycles = await db.updateRoleParent(request.body.roleId, request.body.parentId);
         if(successWithoutCycles) {
             result.send({success: true});
@@ -306,6 +374,11 @@ endpoint("/admin/role", "DELETE", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
+        if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
+           !validation.check(request.body.replaceWithRoleId, validation.Flags.IS_NUMBER).success) {
+            result.send({success: false});
+            return;
+        }
         let parentPermissionsPromises :Promise<void>[] = [];
         for (let role of await db.getAllChildrenOfRole(request.body.roleId)) {
             parentPermissionsPromises.push(permissions.dissolveParentPermissions(role));

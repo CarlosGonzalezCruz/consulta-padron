@@ -98,7 +98,7 @@ export async function passportReady() {
     } else {
         await passportReadyPromise;
     }
-} 
+}
 
 
 export function restartApplication() {

@@ -283,7 +283,7 @@ async function updateDetailsScreen() {
                 }
                 
                 let [ parentRoleData, usersWithRole ] = await Promise.all([
-                    adminFetch.fetchRole(roleData.parent),
+                    roleData.parent != null ? adminFetch.fetchRole(roleData.parent) : null,
                     adminFetch.fetchAllUsersWithRole(selectedRole)
                 ]);
                 displayUsersWithRole(usersWithRole!, $("#role-field-user-amount"));
@@ -437,15 +437,15 @@ async function prepareRolePermissionsModal(caption :string) {
 
     let [ entries, roleData ] = await Promise.all([
         adminFetch.fetchPermissionEntries(),
-        adminFetch.fetchRole(selectedRole),
+        adminFetch.fetchRole(selectedRole) as Promise<Role>,
     ]);
-    selectedRoleInheritedPermissions = await adminFetch.fetchRoleEffectivePermissions(roleData!.parent) as EffectiveRolePermissions;
+    selectedRoleInheritedPermissions = roleData.parent != null ? await adminFetch.fetchRoleEffectivePermissions(roleData.parent) as EffectiveRolePermissions : {};
     let permissions = JSON.parse(roleData!.entries);
     for(let entry of entries!) {
         generateRolePermissionsRow({
             permissionKey: entry.permissionKey,
             displayKey: entry.displayKey,
-            hasParent: roleData?.parent != null,
+            hasParent: roleData.parent != null,
             inherited: permissions[entry.permissionKey] == null,
             allowed: permissions[entry.permissionKey],
         }, template, $("#modal-role-permissions-table"));
