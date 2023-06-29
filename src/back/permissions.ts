@@ -1,13 +1,18 @@
 import * as db from "./db-queries.js";
 import * as utils from "./utils.js";
+import * as properties from "./properties.js";
 import * as inhabitant from "./inhabitant-data.js";
 
 
 export async function identify(username :string) {
     let result = await db.getUserRoleByUsername(username);
     if(result == null) {
-        await db.createUser(username, (await getDefaultRole()).id);
-        result = await db.getUserRoleByUsername(username);
+        if(properties.get("LDAP.allow-self-register", false)) {
+            await db.createUser(username, (await getDefaultRole()).id);
+            result = await db.getUserRoleByUsername(username);
+        } else {
+            throw new Error("La configuración del servidor no permite usuarios auto-registrados.");
+        }
     }
     return result!;
 }

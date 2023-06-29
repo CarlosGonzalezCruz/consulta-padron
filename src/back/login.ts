@@ -67,15 +67,6 @@ export function setup(app :Express) {
             done(Error(`El nombre de usuario "${properties.get("Admin.username")}" está reservado para el administrador.`), false);
             return;
         }
-        if(username == properties.get("Test.username", null) && password == properties.get("Test.password", null)) {
-            permissions.identify(username).then(user => {
-                done(null, {
-                    username,
-                    token: jwt.sign({username: user.username, isAdmin: user.isAdmin == 'T'}, ldapSecret, {expiresIn: ldapTimeout})
-                });
-            });
-            return;
-        }
 
         let baseDN = username;
         if(!baseDN.endsWith(ldapDomain)) {
@@ -94,6 +85,9 @@ export function setup(app :Express) {
                         username,
                         token: jwt.sign({username: user.username, isAdmin: user.isAdmin == 'T'}, ldapSecret, {expiresIn: ldapTimeout})
                     });
+                }).catch(e => {
+                    console.error(`El usuario ${username}, no registrado previamente, ha intentado acceder y se le ha denegado el acceso. Causa: ${e}`);
+                    done(Error(`No cuenta con autorización para acceder a este aplicativo. Póngase en contacto con un administrador.`), false);
                 });
             }
             ldapClient.unbind();

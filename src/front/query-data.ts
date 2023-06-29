@@ -84,8 +84,8 @@ export async function doLogout() {
 
 
 async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
-    let processedId = dni.processIdDocument(idDoc);
-    if(!processedId.valid) {
+    let processedId = dni.processIdDocument(idDoc, $("#dni-nie-passport-selector").find(":selected").val() == "dni-nie");
+    if(processedId.isDniNie && !processedId.valid) {
         if(processedId.error) {
             msg.displayMessageBox(`Ha ocurrido un error inesperado al procesar el siguiente DNI ó NIE: ${idDoc}.`, "error")
         } else {
@@ -103,7 +103,6 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
     
     try {
         let result = await fetchInhabitantDataByNationalId(processedId.queryDigits);
-        console.log(result);
         if(!result.success) {
             await utils.concludeAndWait(loadingHandler);
             if(result.expired) {

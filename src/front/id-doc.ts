@@ -9,6 +9,7 @@ const MATCH_EXPR = /^((?<foreign>[XYZxyz])(?<foreign_digits>\d{1,7})|(?<digits>\
 
 declare type IdDocData = {
     original :string,
+    isDniNie :true,
     valid :false,
     foreign :string | null,
     digits :string | null,
@@ -19,6 +20,7 @@ declare type IdDocData = {
     error :boolean
 } | {
     original :string,
+    isDniNie :true,
     valid :true,
     foreign :string | null,
     digits :string,
@@ -27,21 +29,38 @@ declare type IdDocData = {
     expectedControl :string,
     display :string,
     error :false
+} | {
+    original :string,
+    isDniNie :false,
+    queryDigits :string,
+    display :string
 }
 
 
-export function processIdDocument(idDoc :string) :IdDocData {
-    let ret :IdDocData = {
-        original: idDoc,
-        valid: false,
-        foreign: null,
-        digits: null,
-        control: null,
-        queryDigits: null,
-        expectedControl: null,
-        display: null,
-        error: false
-    };
+export function processIdDocument(idDoc :string, validateDniNie :boolean) :IdDocData {
+    let ret :IdDocData;
+    if(validateDniNie) {
+        ret = {
+            original: idDoc,
+            isDniNie: true,
+            valid: false,
+            foreign: null,
+            digits: null,
+            control: null,
+            queryDigits: null,
+            expectedControl: null,
+            display: null,
+            error: false
+        };
+    } else {
+        ret = {
+            original: idDoc,
+            isDniNie: false,
+            queryDigits: idDoc,
+            display: idDoc
+        };
+        return ret;
+    }
 
     try {
         let match = MATCH_EXPR.exec(idDoc.trim());
@@ -56,7 +75,7 @@ export function processIdDocument(idDoc :string) :IdDocData {
             } else {
                 ret.foreign = null;
                 ret.digits = enforceDigits(nationalDigits, NATIONAL_DIGITS_AMOUNT);
-                ret.control = control;
+                ret.control = control.toUpperCase();
                 ret.queryDigits = ret.digits;
             }
     
@@ -67,7 +86,6 @@ export function processIdDocument(idDoc :string) :IdDocData {
             let expectedControl = calculateIdControlCharacter(effectiveValue);
             ret.expectedControl = expectedControl;
     
-            
             if(!!control) {
                 if(ret.expectedControl == ret.control) {
                     (ret as any).valid = true;

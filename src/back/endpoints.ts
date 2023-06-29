@@ -127,7 +127,7 @@ endpoint("/admin/user-update-username", "POST", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, duplicate: false, reserved: false});
     } else {
-        if(!validation.check(request.body.newName, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC).success ||
+        if(!validation.check(request.body.newName, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC | validation.Flags.IS_NON_EMPTY_STRING).success ||
            !validation.check(request.body.userId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success) {
             result.send({success: false, duplicate: false, reserved: false});
             return;
@@ -165,7 +165,7 @@ endpoint("/admin/user", "PUT", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false, duplicate: false});
     } else {
-        if(!validation.check(request.body.username, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC).success) {
+        if(!validation.check(request.body.username, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC | validation.Flags.IS_NON_EMPTY_STRING).success) {
             result.send({success: false});
             return;
         }
@@ -225,7 +225,7 @@ endpoint("/admin/role", "PUT", async (request, result) => {
     if(!data.success || !data.data.isAdmin) {
         result.send({success: false});
     } else {
-        if(!validation.check(request.body.rolename, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC_WITH_SPACES).success ||
+        if(!validation.check(request.body.rolename, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC_WITH_SPACES | validation.Flags.IS_NON_EMPTY_STRING).success ||
            !validation.check(request.body.parentId, validation.Flags.IS_NUMBER).success) {
             result.send({success: false});
             return;
@@ -242,7 +242,7 @@ endpoint("/admin/role-update-name", "POST", async (request, result) => {
         result.send({success: false});
     } else {
         if(!validation.check(request.body.roleId, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success ||
-           !validation.check(request.body.newName, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC_WITH_SPACES).success) {
+           !validation.check(request.body.newName, validation.Flags.NOT_NULL | validation.Flags.IS_ALPHANUMERIC_WITH_SPACES | validation.Flags.IS_NON_EMPTY_STRING).success) {
             result.send({success: false});
             return;
         }

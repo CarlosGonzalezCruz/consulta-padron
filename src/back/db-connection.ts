@@ -92,11 +92,13 @@ export async function performQueryMySQL(query :string, updateMetaResults = false
                 reject(error);
             } else {
                 if(updateMetaResults) {
-                    sqlitedb.all(`SELECT changes() AS CHANGES;`, (error :any, result :{CHANGES :number}[]) => {
-                        sqliteLastRowCount = result[0].CHANGES;
+                    sqlitedb.all(`SELECT changes() AS CHANGES;`, (error :any, metaResult :{CHANGES :number}[]) => {
+                        sqliteLastRowCount = metaResult[0].CHANGES;
+                        resolve(result);
                     });
+                } else {
+                    resolve(result);
                 }
-                resolve(result);
             }
        });
     });

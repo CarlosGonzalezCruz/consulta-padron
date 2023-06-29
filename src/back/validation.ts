@@ -6,9 +6,10 @@ export enum Flags {
     IS_NUMBER = 1 << 2,
     IS_ALPHANUMERIC = 1 << 3,
     IS_ALPHANUMERIC_WITH_SPACES = 1 << 4,
-    IS_BOOLEAN = 1 << 5,
-    IS_OBJECT = 1 << 6,
-    PERMISSION_FORMAT_COMPLIANT = 1 << 7
+    IS_NON_EMPTY_STRING = 1 << 5,
+    IS_BOOLEAN = 1 << 6,
+    IS_OBJECT = 1 << 7,
+    PERMISSION_FORMAT_COMPLIANT = 1 << 8
 }
 
 
@@ -29,13 +30,18 @@ export function check(value :any, flags :Flags) {
         }
     }
     if(flags & Flags.IS_ALPHANUMERIC) {
-        if(value != null && (typeof value != "string" || !value.match(/^\w*$/))) {
+        if(value != null && (typeof value != "string" || !value.match(/^(\w|[ŽžÀ-ÿ])*$/))) {
             return {success: false as const, flag: Flags.IS_ALPHANUMERIC};
         }
     }
     if(flags & Flags.IS_ALPHANUMERIC_WITH_SPACES) {
-        if(value != null && (typeof value != "string" || !value.match(/^(\w|\s)*$/))) {
+        if(value != null && (typeof value != "string" || !value.match(/^(\w|[ŽžÀ-ÿ]|\s)*$/))) {
             return {success: false as const, flag: Flags.IS_ALPHANUMERIC};
+        }
+    }
+    if(flags & Flags.IS_NON_EMPTY_STRING) {
+        if(value != null && (typeof value != "string" || value.length == 0)) {
+            return {success: false as const, flag: Flags.IS_NON_EMPTY_STRING};
         }
     }
     if(flags & Flags.IS_BOOLEAN) {

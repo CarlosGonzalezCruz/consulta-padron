@@ -64,6 +64,17 @@ const ENTRIES = [
         render: async (v :number) => await db.getAcademicLevelDescription(v)
     },
     {
+        permissionKey: "last_move_date",
+        displayKey: "Fecha último movimiento",
+        field: "MOV.FECHA_OCURRENCIA",
+        render: (v :Date) => utils.writeDate(v) 
+    },
+    {
+        permissionKey: "last_move_description",
+        displayKey: "Razón último movimiento",
+        field: "CNF_MOV.DESCRIPCION"
+    },
+    {
         permissionKey: "father_name",
         displayKey: "Nombre del padre",
         field: "HAB.NOMBRE_PADRE"

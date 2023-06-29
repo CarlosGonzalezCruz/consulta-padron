@@ -20,10 +20,12 @@
                         <div class="d-flex flex-row flex-fill justify-content-center">
                             <div class="d-flex flex-row mx-2 mx-md-5">
                                 <div class="flex-grow-1"></div>
-                                <label for="inhabitant-id" class="d-block d-md-none col-form-label text-md-right">Nº Id.</label>
-                                <label for="inhabitant-id" class="d-none d-md-block col-form-label text-md-right">Número de Identidad</label>
+                                <select id="dni-nie-passport-selector" class="custom-select fixed-w-120">
+                                    <option value="dni-nie" selected>DNI/NIE</option>
+                                    <option value="passport">Pasaporte</option>
+                                </select>
                                 <div class="mx-2">
-                                    <input id="inhabitant-id-field" name="DNI" class="w-100 form-control" placeholder="DNI/NIE">
+                                    <input id="inhabitant-id-field" name="DNI" class="w-100 form-control" placeholder="Número Identificador">
                                 </div>
                                 <button id="btn-search" class="btn btn-primary">
                                     <img src="icons/search.svg" type="image/svg" class="mr-1 d-inline svg-inverted-color"></svg>
@@ -39,13 +41,13 @@
                                 <div id="default-placeholder" class="placeholder d-flex flex-column flex-fill justify-content-center align-items-center">
                                     <img src="icons/person-vcard.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
                                     <h5 class="text-center">
-                                        Introduzca el Número de Identidad de un habitante para comenzar.
+                                        Introduzca el Número Identificador de un habitante para comenzar.
                                     </h5>
                                 </div>
                                 <div id="not-found-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
                                     <img src="icons/exclamation-circle.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
                                     <h5 class="text-center">
-                                        No existen datos de habitante con el Número de Identidad <span id="not-found-placeholder-id-number"></span>.
+                                        No existen datos de ningún habitante identificado como <span id="not-found-placeholder-id-number"></span>.
                                     </h5>
                                 </div>
                                 <div id="unauthorized-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
