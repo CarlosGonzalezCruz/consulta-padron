@@ -48,7 +48,7 @@ export async function initialize() {
         $("#modal-delete-user-selected-username").text(selectedUsername);
         $("#modal-delete-user").modal("show");
     });
-    $("#role-button-create").on("click", () => {
+    $("#role-button-create").on("click", function() {
         creatingChildRole = false;
         focusModalInputField($("#modal-create-role"));
         $("#modal-create-role").modal("show");
@@ -106,9 +106,11 @@ export async function initialize() {
         $("#modal-delete-user").modal("hide");
         await adminFetch.deleteUser(selectedUser, () => selectUser(null));
     });
-    $("#modal-create-role-confirm").on("click", async () => {
-        $("#modal-create-role").modal("hide");
-        await adminFetch.createNewRole($("#modal-create-role-input-field").val() as string, creatingChildRole ? selectedRole : null, selectRole);
+    $("#modal-create-role-confirm").on("click", async function() {
+        if(!$(this).is(".disabled")) {
+            $("#modal-create-role").modal("hide");
+            await adminFetch.createNewRole($("#modal-create-role-input-field").val() as string, creatingChildRole ? selectedRole : null, selectRole);
+        }
     });
     $("#modal-update-rolename-confirm").on("click", async () => {
         $("#modal-update-rolename").modal("hide");
@@ -440,7 +442,7 @@ async function prepareRolePermissionsModal(caption :string) {
         adminFetch.fetchRole(selectedRole) as Promise<Role>,
     ]);
     selectedRoleInheritedPermissions = roleData.parent != null ? await adminFetch.fetchRoleEffectivePermissions(roleData.parent) as EffectiveRolePermissions : {};
-    let permissions = JSON.parse(roleData!.entries);
+    let permissions = roleData!.entries;
     for(let entry of entries!) {
         generateRolePermissionsRow({
             permissionKey: entry.permissionKey,
@@ -501,7 +503,9 @@ function readSelectedPermissions(tableBody :JQuery<HTMLElement>) {
         let key = $(child).attr("permission-key") as string;
         let inherit = $(child).find("input[field='inherit']").prop('checked') as boolean;
         let allow = $(child).find("input[field='allow']").prop('checked') as boolean;
-        ret[key!] = inherit ? null : allow;
+        if(!inherit) {
+            ret[key!] = allow;
+        }
     }
     return ret;
 }

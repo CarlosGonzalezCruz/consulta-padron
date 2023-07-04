@@ -371,7 +371,7 @@ export async function toggleRoleDefault(roleId :number | null, onSuccess? :() =>
 }
 
 
-export async function updateRolePermissions(roleId :number | null, permissions :any) {
+export async function updateRolePermissions(roleId :number | null, permissions :RolePermissions) {
     if(roleId == null) {
         console.error("No hay rol seleccionado. No se actualizará nada.");
         return;

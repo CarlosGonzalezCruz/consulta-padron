@@ -1,8 +1,6 @@
 import * as db from "./db-queries.js";
 import * as utils from "./utils.js";
 
-db.openMySQL();
-
 const NO_DATA_HTML = `<span class="no-data-indicator">Sin datos</span>`;
 const NO_PERMISSION_HTML = `<span class="not-allowed-indicator">Sin autorización</span>`;
 

@@ -48,7 +48,7 @@ export async function dissolveParentPermissions(role :Role) {
     if(grandparentRole == null) {
         newPermissions = await getEffectivePermissions(role);
     } else {
-        let currentPermissions = utils.bufferToJson(role.entries) as RolePermissions;
+        let currentPermissions = role.entries;
         let [ currentEffectivePermissions, grandparentPermissions ] = await Promise.all([
             await getEffectivePermissions(role),
             await getEffectivePermissions(grandparentRole)
@@ -72,11 +72,11 @@ export async function getEffectivePermissions(role :Role, pendingKeys? :Set<stri
     if(pendingKeys == null) {
         pendingKeys = new Set(Array.from(inhabitant.getPermissionEntries()).map(e => e.permissionKey));
     }   
-    let currentPermissions = utils.bufferToJson(role.entries);
+    let currentPermissions = role.entries;
     let ret :EffectiveRolePermissions = {};
     for(let key in currentPermissions) {
         if(pendingKeys.has(key) && currentPermissions[key] != null) {
-            ret[key] = currentPermissions[key];
+            ret[key] = currentPermissions[key] as boolean;
             pendingKeys.delete(key);
         }
     }

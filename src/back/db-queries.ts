@@ -287,9 +287,8 @@ export async function updateRoleName(id :number, newName :string) {
 
 export async function updateRolePermissions(id :number, permissions: any) {
     try {
-        let encodedPermissions = utils.jsonToBuffer(permissions);
         await db.performQueryMySQL(`
-            UPDATE ${db.profileTable("ROLES")} SET entries='${encodedPermissions}' WHERE id=${id};
+            UPDATE ${db.profileTable("ROLES")} SET entries='${JSON.stringify(permissions)}' WHERE id=${id};
         `);
         console.log(`Se ha actualizado los permisos del rol ${id}`);
     } catch(e) {

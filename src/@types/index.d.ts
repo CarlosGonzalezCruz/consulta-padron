@@ -22,7 +22,7 @@ declare type Role = {
     isDefault :DBBinary,
     isAdmin :DBBinary,
     parent :number,
-    entries :string
+    entries :RolePermissions
 }
 
 

@@ -1,33 +1,20 @@
 import OracleDB from "oracledb";
-import sqlite3 from "sqlite3";
-import fs from "fs";
-import path from "path";
+import MySQL from "mysql2";
 import * as properties from "./properties.js";
 
-const DB_PATH = "./db/permissions.db";
 
 let oracledb :OracleDB.Connection | null;
 let oracledbCloseTimeout :NodeJS.Timeout | null;
-let sqlitedb :sqlite3.Database;
+let mysqldb :MySQL.Pool;
 
-let sqliteLastRowCount = 0;
+let mysqlSchema = "";
+let mysqldbLastRowCount = 0;
 
 
-export function openMySQL() {
-    return new Promise<void>((resolve, reject) => {
-        if(!fs.existsSync(path.dirname(DB_PATH))) {
-            fs.mkdirSync(path.dirname(DB_PATH));
-        }
-
-        sqlitedb = new sqlite3.Database(DB_PATH, error => {
-            if(error) {
-                reject(error);
-            }
-            console.log(`Conectado a ${DB_PATH}`);
-            initTables();
-        });
-        resolve();
-    });
+export async function openMySQL() {
+    mysqlSchema = properties.get("MySQL.schema");
+    await establishMySQLConnection();
+    await initTables();
 }
 
 
@@ -67,40 +54,55 @@ export async function closeOracleDB() {
 
 export async function closeAll() {
     await Promise.all([
-        closeOracleDB(),
-        new Promise<void>(r => { sqlitedb.close(); r() })
+        console.log(`La conexión con MySQL se cerrará automáticamente.`),
+        closeOracleDB()
     ]);
 }
 
 
-export function profileTable(tableName :string) {
+export function profileTable(tableName :string, prependSchema = true) {
     let suffix = properties.get<string>("MySQL.table-suffix", "");
-    return `${tableName}${!!suffix ? "_" : ""}${suffix ?? ""}`;
+    let ret = `${tableName}${!!suffix ? "_" : ""}${suffix ?? ""}`;
+    if(prependSchema) {
+        ret = `${mysqlSchema}${mysqlSchema.length > 0 ? '.' : ''}${ret}`;
+    }
+    return ret;
 }
 
 
 export function getMySQLLastRowCount() {
-    return sqliteLastRowCount;
+    return mysqldbLastRowCount;
 }
 
 
 export async function performQueryMySQL(query :string, updateMetaResults = false) :Promise<any> {
     return new Promise((resolve, reject) => {
-        sqlitedb.all(query, (error, result :any) => {
+        mysqldb.getConnection((error, connection) => {
             if(error) {
-                sqliteLastRowCount = -1;
                 reject(error);
-            } else {
-                if(updateMetaResults) {
-                    sqlitedb.all(`SELECT changes() AS CHANGES;`, (error :any, metaResult :{CHANGES :number}[]) => {
-                        sqliteLastRowCount = metaResult[0].CHANGES;
-                        resolve(result);
-                    });
+                return;
+            }
+            connection.query(query, (error, result) => {
+                if(error) {
+                    mysqldbLastRowCount = -1;
+                    reject(error);
                 } else {
+                    if(updateMetaResults) {
+                        if(result instanceof Array) {
+                            if(result[0] instanceof Array) {
+                                mysqldbLastRowCount = result[0][0].affectedRows;
+                            } else {
+                                mysqldbLastRowCount = result[0].affectedRows;
+                            }
+                        } else {
+                            mysqldbLastRowCount = result.affectedRows;
+                        }
+                    }
                     resolve(result);
                 }
-            }
-       });
+                connection.release();
+            });
+        });
     });
 }
 
@@ -151,29 +153,54 @@ async function establishOracleDBConnection() {
 }
 
 
+async function establishMySQLConnection() {
+    let ret = MySQL.createPool({
+        connectionLimit: properties.get<number>("MySQL.connection-limit", 10),
+        host: properties.get<string>("MySQL.host"),
+        port: properties.get<number>("MySQL.port"),
+        user: properties.get<string>("MySQL.username"),
+        password: properties.get<string>("MySQL.password")
+    });
+    return new Promise<MySQL.Pool>((resolve, reject) => {
+        console.log(`Probando a crear una conexión con MySQL en ${properties.get("MySQL.host")}:${properties.get("MySQL.port")} como ${properties.get("MySQL.username")}.`);
+        // Trivial query to verify whether MySQL is resolving queries at all
+        ret.query("SELECT 1", (error, result) => {
+            if(error) {
+                throw new Error(`No se ha podido crear una conexión con MySQL o no está resolviendo consultas. Causa: ${error}`);
+            } else {
+                console.log("Conexión verificada con MySQL.");
+                mysqldb = ret;
+                resolve(ret);
+            }
+        });
+    });
+}
+
+
 async function initTables() {
-    let rolesTable = profileTable("ROLES");
-    let usersTable = profileTable("USERS");
-    let rolesTableExists = (await performQueryMySQL(`SELECT NAME FROM SQLITE_MASTER WHERE TYPE='table' AND NAME='${rolesTable}'`)).length != 0;
-    let usersTableExists = (await performQueryMySQL(`SELECT NAME FROM SQLITE_MASTER WHERE TYPE='table' AND NAME='${usersTable}'`)).length != 0;
+    let rolesTable = profileTable("ROLES", false);
+    let usersTable = profileTable("USERS", false);
+    let rolesTableExists = (await performQueryMySQL(`SHOW TABLES FROM ${mysqlSchema} LIKE '${rolesTable}'`)).length != 0;
+    let usersTableExists = (await performQueryMySQL(`SHOW TABLES FROM ${mysqlSchema} LIKE '${usersTable}'`)).length != 0;
 
     if(!rolesTableExists || !usersTableExists) {
         console.log(`Se van a crear las tablas necesarias en MySQL.`);
         if(!rolesTableExists) {
             try {
                 await performQueryMySQL(`
-                    CREATE TABLE ${rolesTable} (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CREATE TABLE ${mysqlSchema}.${rolesTable} (
+                        id INTEGER PRIMARY KEY AUTO_INCREMENT,
                         name TEXT,
                         isDefault VARCHAR(1) NOT NULL DEFAULT 'F',
                         isAdmin VARCHAR(1) NOT NULL DEFAULT 'F',
                         parent INTEGER,
-                        entries BLOB,
+                        entries JSON,
                         CHECK(isDefault IN ('T', 'F')),
                         CHECK(isAdmin IN ('T', 'F')),
                         FOREIGN KEY(parent)
-                            REFERENCES ${rolesTable}(id)
-                    );
+                            REFERENCES ${mysqlSchema}.${rolesTable}(id),
+                        INDEX id_idx (id)
+                    ) AUTO_INCREMENT = 101;
                 `);
                 console.log(`Tabla ${rolesTable} creada en MySQL.`);
             } catch(e) {
@@ -183,15 +210,17 @@ async function initTables() {
         if(!usersTableExists) {
             try {
                 await performQueryMySQL(`
-                    CREATE TABLE ${usersTable} (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT UNIQUE,
+                    CREATE TABLE ${mysqlSchema}.${usersTable} (
+                        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                        username VARCHAR(30) UNIQUE,
                         role INTEGER,
                         isAuxiliar VARCHAR(1) NOT NULL DEFAULT 'F',
-                        CHECK(isAuxiliar IN ('T', 'F'))
+                        CHECK(isAuxiliar IN ('T', 'F')),
                         FOREIGN KEY(role)
-                            REFERENCES ${rolesTable}(id)
-                    );
+                            REFERENCES ${mysqlSchema}.${rolesTable}(id),
+                        INDEX id_idx (id),
+                        INDEX username_idx (username)
+                    ) AUTO_INCREMENT = 1001;
                 `);
                 console.log(`Tabla ${usersTable} creada en MySQL.`);
             } catch(e) {
