@@ -19,6 +19,11 @@ export async function enableSearch() {
     $("#btn-search").on("click", () => {
         queryAndPopulatePage($("#inhabitant-id-field").val() as string);
     });
+    $("#btn-generate-inhabitant-document").on("click", () => {
+        if(lastResult?.idDoc) {
+            requestDocument(lastResult.idDoc, lastResult.displayIdDoc);
+        }
+    });
     window.addEventListener("popstate", e => {
         $("#inhabitant-id-field").val(e.state?.id ?? "");
         if(!!e.state?.id) {
@@ -131,6 +136,7 @@ async function queryAndPopulatePage(idDoc :string, saveHistory = true) {
             }
         } else {
             lastResult = result.data;
+            lastResult.displayIdDoc = processedId.display;
             displayFullName(lastResult.fullName);
             updateTableAndTabs($("#inhabitant-tabs li[tab-content='overview']"));
             makeTableVisible(true);
@@ -231,5 +237,30 @@ function makeTableVisible(visible :boolean, placeholderScreen :JQuery | null = n
         $("#inhabitant-data").removeClass("d-flex");
         $("#inhabitant-data").addClass("d-none");
         $("#inhabitant-tabs li").addClass("disabled");
+    }
+}
+
+
+async function requestDocument(id :string, displayId :string) {
+    let loadingHandler = msg.displayLoadingBox("Generando el documento...");
+
+    try {
+        let fetchRequest = await fetch("/inhabitant-data-document", {
+            method: "POST",
+            headers: {"content-Type": "application/json"},
+            body: JSON.stringify({id, displayId}),
+            credentials: "include"
+        });
+        if(!fetchRequest.ok) {
+            await utils.concludeAndWait(loadingHandler);
+            msg.displayMessageBox(`No se ha podido generar el documento para ${displayId}.`, "error");
+        } else {
+            let data = await fetchRequest.blob();
+            await utils.concludeAndWait(loadingHandler);
+            window.open(window.URL.createObjectURL(data));
+        }
+    } catch(e) {
+        await utils.concludeAndWait(loadingHandler);
+        msg.displayMessageBox(`Ha ocurrido un problema al tratar de generar el documento.`, "error");
     }
 }

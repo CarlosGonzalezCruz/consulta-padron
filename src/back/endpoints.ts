@@ -7,6 +7,7 @@ import * as permissions from "./permissions.js";
 import * as db from "./db-queries.js";
 import * as login from "./login.js";
 import * as validation from "./validation.js";
+import * as document from "./generate-document.js";
 import * as utils from "./utils.js";
 
 
@@ -97,6 +98,32 @@ endpoint("/inhabitant-data-id", "POST", async (request, result) => {
         let effectivePermissions = await permissions.getEffectivePermissions(userRole);
         let allowedKeys = Object.entries(effectivePermissions).filter(e => e[1]).map(e => e[0]);
         result.send({success: true, data: await inhabitant.generateEntriesFor(request.body.id, allowedKeys)});
+    }
+});
+
+endpoint("/inhabitant-data-document", "POST", async (request, result) => {
+    let data = login.getSessionData(request);
+    if(!data.success) {
+        result.writeHead(400).end();
+    } else {
+        if(!validation.check(request.body.id, validation.Flags.NOT_NULL | validation.Flags.IS_NUMBER).success
+        || !validation.check(request.body.displayId, validation.Flags.IS_ALPHANUMERIC).success) {
+            result.writeHead(400).end();
+            return;
+        }
+        let userRole = await permissions.identify(data.data.username || data.data.user);
+        let effectivePermissions = await permissions.getEffectivePermissions(userRole);
+        let allowedKeys = Object.entries(effectivePermissions).filter(e => e[1]).map(e => e[0]);
+        try {
+            let docData = await document.generateDocumentForInhabitant(request.body.id, allowedKeys, request.body.displayId);
+            result.writeHead(200, {
+                "Content-Length": Buffer.byteLength(docData),
+                "Content-Type": "application/pdf",
+                "Content-disposition": `attachment;filename=padron-${request.body.displayId}.pdf`
+            }).end(docData);
+        } catch(e) {
+            result.writeHead(400).end();
+        }
     }
 });
 

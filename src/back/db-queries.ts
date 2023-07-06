@@ -339,16 +339,14 @@ export async function dissolveRoleParent(id :number) {
 export async function deleteRole(id :number, replaceWithRoleId :number | null) {
     try {
         await db.performQueryMySQL(`
+            UPDATE ${db.profileTable("USERS")} SET role=${replaceWithRoleId} WHERE role=${id};
+        `, true);
+        await db.performQueryMySQL(`
             DELETE FROM ${db.profileTable("ROLES")} WHERE id=${id} AND isDefault='F';
         `, true);
         console.log(`Eliminado rol con id ${id}`);
-        if(db.getMySQLLastRowCount() > 0) {
-            await db.performQueryMySQL(`
-                UPDATE ${db.profileTable("USERS")} SET role=${replaceWithRoleId} WHERE role=${id};
-            `, true);
-        }
     } catch(e) {
-        console.error(`Ha ocurrido un problema al eliminar el usuario. Causa: ${e}`);
+        console.error(`Ha ocurrido un problema al eliminar el rol. Causa: ${e}`);
     }
 }
 
