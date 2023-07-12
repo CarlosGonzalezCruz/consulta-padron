@@ -3,6 +3,9 @@ import * as msg from "./message-box.js";
 import * as session from "./session.js";
 
 
+// Este módulo gestiona la operación de inicio de sesión desde el cliente.
+
+
 utils.documentReady().then(() => {
     $("#form-login").on("submit", async function(e) {
         e.preventDefault();
@@ -29,6 +32,7 @@ utils.documentReady().then(() => {
 });
 
 
+/** Lanza una solicitud de inicio de sesión con las credenciales indicadas. */
 async function doLogin(entries :{User :FormDataEntryValue | null, Password :FormDataEntryValue | null}) {
     if(!$("#form-login-user").val() || !$("#form-login-password").val()) {
         msg.displayMessageBox("No deje vacíos los campos de inicio de sesión.", 'error');
@@ -47,6 +51,8 @@ async function doLogin(entries :{User :FormDataEntryValue | null, Password :Form
         await utils.concludeAndWait(loadingHandler);
 
         if(data.success) {
+            // El servidor ha aceptado las credenciales y nos ha devuelto un token que representa la sesión. Para interactuar
+            // con el servidor a partir de ahora, utilizaremos dicho token.
             session.start({username: data.user.username, token: data.user.token});
             window.location.href = "/query";
         } else if(data.message == "Invalid Credentials") {
@@ -64,6 +70,7 @@ async function doLogin(entries :{User :FormDataEntryValue | null, Password :Form
 }
 
 
+/** Muestra en pantalla el nombre del entorno según lo indica el servidor. */
 async function updateEnvironmentLabel() {
     let fetchRequest = await fetch("/environment-label");
     let data = await fetchRequest.text();

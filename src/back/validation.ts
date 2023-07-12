@@ -1,5 +1,8 @@
 
 
+// Este módulo define la validación que se usará en endpoints para evitar valores fraudulentos como parte de la petición que podrían producir ataques XSS.
+
+/** Condiciones que se validarán sobre el valor. */
 export enum Flags {
     DEFINED = 1 << 0,
     NOT_NULL = 1 << 1,
@@ -13,6 +16,7 @@ export enum Flags {
 }
 
 
+/** Comprueba que el valor proporcionado es compatible con las condiciones impuestas. */
 export function check(value :any, flags :Flags) {
     if(value === undefined) {
         return {success: false as const, flag: Flags.DEFINED};

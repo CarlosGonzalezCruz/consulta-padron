@@ -1,5 +1,8 @@
 
 
+// Este módulo almacena temporalmente algunos datos de la sesión en el navegador.
+
+
 let sessiondata :{
     username :string,
     token :string

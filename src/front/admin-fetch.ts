@@ -2,13 +2,21 @@ import * as msg from "./message-box.js";
 import * as utils from "./utils.js";
 
 
+// Este módulo lleva todas las conexiones del panel de administrador al servidor. Para poder realizar estas operaciones, es
+// necesario que el token de sesión sea de administrador.
+
+
+/** Obtiene una lista con el id y el nombre de todos los usuarios registrados. */
 export async function fetchAllUsers() {
     let loadingHandler = msg.displayLoadingBox("Obteniendo usuarios...");
     try {
         let data = await fetchRequest("/admin/all-users", "POST", {});
         utils.concludeAndWait(loadingHandler);
         if(data.success) {
-            return data.data;
+            return data.data as {id :number, username :string}[];
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los usuarios.", 'error');
             return null;
@@ -22,13 +30,17 @@ export async function fetchAllUsers() {
 }
 
 
+/** Obtiene una lista con el id y el nombre de todos los roles. */
 export async function fetchAllRoles() {
     let loadingHandler = msg.displayLoadingBox("Obteniendo roles...");
     try {
         let data = await fetchRequest("/admin/all-roles", "POST", {});
         utils.concludeAndWait(loadingHandler);
         if(data.success) {
-            return data.data as Role[];
+            return data.data as {id :number, name :string}[];
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los roles.", 'error');
             return null;
@@ -42,6 +54,7 @@ export async function fetchAllRoles() {
 }
 
 
+/** Obtiene una lista con el id y el nombre de todos los usuarios que tienen el rol indicado. */
 export async function fetchAllUsersWithRole(roleId :number) {
     let loadingHandler = msg.displayLoadingBox("Obteniendo usuarios...");
     try {
@@ -49,6 +62,9 @@ export async function fetchAllUsersWithRole(roleId :number) {
         utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data as {id :number, username :string}[];
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los usuarios.", 'error');
             return null;
@@ -62,6 +78,7 @@ export async function fetchAllUsersWithRole(roleId :number) {
 }
 
 
+/** Obtiene todos los datos del usuario indicado y de su rol. */
 export async function fetchUser(userId :number) {
     let loadingHandler = msg.displayLoadingBox("Obteniendo datos del usuario...");
     try {
@@ -69,6 +86,9 @@ export async function fetchUser(userId :number) {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data as User & Role;
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los datos del usuario.", 'error');
             return null;
@@ -82,6 +102,7 @@ export async function fetchUser(userId :number) {
 }
 
 
+/** Obtiene todos los datos del rol indicado. */
 export async function fetchRole(roleId :number) {
     let loadingHandler = msg.displayLoadingBox("Obteniendo datos del rol...");
     try {
@@ -89,6 +110,9 @@ export async function fetchRole(roleId :number) {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data as Role;
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los datos del rol.", 'error');
             return null;
@@ -102,6 +126,7 @@ export async function fetchRole(roleId :number) {
 }
 
 
+/** Obtiene los datos del rol marcado como predeterminado. */
 export async function fetchDefaultRole() {
     let loadingHandler = msg.displayLoadingBox("Obteniendo datos del rol...");
     try {
@@ -109,6 +134,9 @@ export async function fetchDefaultRole() {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data as Role;
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los datos del rol.", 'error');
             return null;
@@ -122,6 +150,7 @@ export async function fetchDefaultRole() {
 }
 
 
+/** Obtiene la lista de todas las entradas a las que se puede aplicar permisos.  */
 export async function fetchPermissionEntries() {
     let loadingHandler = msg.displayLoadingBox("Obteniendo permisos...");
     try {
@@ -129,6 +158,9 @@ export async function fetchPermissionEntries() {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data as {permissionKey :string, displayKey :string}[];
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los permisos.", 'error');
             return null;
@@ -142,6 +174,7 @@ export async function fetchPermissionEntries() {
 }
 
 
+/** Obtiene las entradas que el rol indicado puede consultar de manera efectiva, considerando su rol base. */
 export async function fetchRoleEffectivePermissions(roleId :number) {
     let loadingHandler = msg.displayLoadingBox("Obteniendo permisos del rol...");
     try {
@@ -149,6 +182,9 @@ export async function fetchRoleEffectivePermissions(roleId :number) {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data as EffectiveRolePermissions;
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido obtener los permisos.", 'error');
             return null;
@@ -162,6 +198,9 @@ export async function fetchRoleEffectivePermissions(roleId :number) {
 }
 
 
+/** Crea una nueva cuenta de usuario. `onSuccess` se ejecutará si se crea la cuenta, con el id asignado a la nueva cuenta.
+ * `onDuplicate` se ejecutará si no se ha podido crear la cuenta por repetir nombres de usuario, con el id de la cuenta que ya tiene ese nombre.
+ */
 export async function createNewUser(username :string, onSuccess? :(id :number) => void, onDuplicate? :(id :number) => void) {
     if(!username) {
         msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
@@ -175,6 +214,9 @@ export async function createNewUser(username :string, onSuccess? :(id :number) =
         if(data.success) {
             msg.displayMessageBox(`Se ha creado una cuenta para el usuario ${data.user.username}.`, 'success');
             if(!!onSuccess) onSuccess(data.user.id);
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else if(data.duplicate) {
             msg.displayMessageBox(`El nombre de usuario introducido ya está en uso para otro usuario.`, 'error');
             if(!!onDuplicate) onDuplicate(data.id);
@@ -189,6 +231,7 @@ export async function createNewUser(username :string, onSuccess? :(id :number) =
 }
 
 
+/** Solicita un cambio de nombre para el usuario indicado. `onSuccess` se ejecutará cuando el servidor confirme el cambio de nombre. */
 export async function renameUser(userId :number | null, oldName :string, newName :string, onSuccess? :(id :number) => void) {
     if(userId == null) {
         console.error("No hay usuario seleccionado. No se actualizará nada.", 'error');
@@ -210,6 +253,9 @@ export async function renameUser(userId :number | null, oldName :string, newName
             if(!!onSuccess) onSuccess(userId);
         } else if(data.reserved) {
             msg.displayMessageBox("El nombre de usuario introducido está reservado para el servidor. Elija otro o modifique las propiedades del servidor.", 'error');
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else if(data.duplicate) {
             msg.displayMessageBox("El nombre de usuario introducido ya está en uso para otro usuario. Elija otro.", 'error');
         } else {
@@ -223,6 +269,7 @@ export async function renameUser(userId :number | null, oldName :string, newName
 }
 
 
+/** Asigna el rol indicado al usuario indicado. */
 export async function updateUserRole(userId :number | null, roleId :number) {
     if(userId == null) {
         console.error("No hay usuario seleccionado. No se actualizará nada.", 'error');
@@ -235,6 +282,9 @@ export async function updateUserRole(userId :number | null, roleId :number) {
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             return data.data;
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido cambiar el rol al usuario.", 'error');
         }
@@ -246,6 +296,7 @@ export async function updateUserRole(userId :number | null, roleId :number) {
 }
 
 
+/** Solicita eliminar la cuenta de usuario indicada. `onSuccess` se ejecutará cuando el servidor confirme la eliminación. */
 export async function deleteUser(userId :number | null, onSuccess? :() => void) {
     if(userId == null) {
         console.error("No hay usuario seleccionado. No se eliminará nada.");
@@ -258,6 +309,9 @@ export async function deleteUser(userId :number | null, onSuccess? :() => void) 
         if(data.success) {
             msg.displayMessageBox("Se ha eliminado los datos del usuario correctamente.", 'success');
             if(!!onSuccess) onSuccess();
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido eliminar los datos del usuario.", 'error');
         }
@@ -269,6 +323,9 @@ export async function deleteUser(userId :number | null, onSuccess? :() => void) 
 }
 
 
+/** Solicita la creación de un rol nuevo. `parentId` es el id del que será el rol base. `onSuccess` se ejecutará una vez se confirme
+ *  la creación del rol y recibirá el id del rol por parámetro.
+ */
 export async function createNewRole(rolename :string, parentId :number | null, onSuccess? :(id :number) => void) {
     if(!rolename) {
         msg.displayMessageBox("No deje el nombre del rol vacío.", 'error');
@@ -282,6 +339,9 @@ export async function createNewRole(rolename :string, parentId :number | null, o
         if(data.success) {
             msg.displayMessageBox(`Se ha creado el rol ${data.role.name}.`, 'success');
             if(!!onSuccess) onSuccess(data.role.id);
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox(`No se ha podido crear el rol.`, 'error');
         }
@@ -293,6 +353,9 @@ export async function createNewRole(rolename :string, parentId :number | null, o
 }
 
 
+/** Solicita un cambio de nombre para el rol solicitado. El parámetro `oldName` solo se usa para validar. `onSuccess` se ejecutará
+  * cuando se confirme el cambio de nombre.
+  */
 export async function renameRole(roleId :number | null, oldName :string, newName :string, onSuccess? :(id :number) => void) {
     if(roleId == null) {
         msg.displayMessageBox("No deje el nombre de usuario vacío.", 'error');
@@ -312,6 +375,9 @@ export async function renameRole(roleId :number | null, oldName :string, newName
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             if(!!onSuccess) onSuccess(roleId);
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido actualizar el nombre del rol.", 'error');
         }
@@ -323,6 +389,7 @@ export async function renameRole(roleId :number | null, oldName :string, newName
 }
 
 
+/** Solicita el cambio de estatus de administrador para el rol indicado. `onSuccess` se ejecutará cuando el servidor confirme el cambio. */
 export async function toggleRoleAdmin(roleId :number | null, currentValue :DBBinary, onSuccess? :(id :number) => void) {
     if(roleId == null) {
         console.error("No hay rol seleccionado. No se actualizará nada.");
@@ -335,6 +402,9 @@ export async function toggleRoleAdmin(roleId :number | null, currentValue :DBBin
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             if(!!onSuccess) onSuccess(roleId);
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido actualizar el rango del rol.", 'error');
         }
@@ -346,6 +416,7 @@ export async function toggleRoleAdmin(roleId :number | null, currentValue :DBBin
 }
 
 
+/** Solicita el cambio de rol predeterminado al indicado. `onSuccess` se ejecutará cuando el servidor confirme el cambio. */
 export async function toggleRoleDefault(roleId :number | null, onSuccess? :() => void) {
     if(roleId == null) {
         console.error("No hay rol seleccionado. No se actualizará nada.");
@@ -358,6 +429,9 @@ export async function toggleRoleDefault(roleId :number | null, onSuccess? :() =>
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             if(!!onSuccess) onSuccess();
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else if(data.missing) {
             msg.displayMessageBox("El anterior rol predeterminado ya no existe.", 'error');
         } else {
@@ -371,6 +445,7 @@ export async function toggleRoleDefault(roleId :number | null, onSuccess? :() =>
 }
 
 
+/** Solicita una actualización de permisos del rol indicado a los permisos proporcionados. */
 export async function updateRolePermissions(roleId :number | null, permissions :RolePermissions) {
     if(roleId == null) {
         console.error("No hay rol seleccionado. No se actualizará nada.");
@@ -383,6 +458,9 @@ export async function updateRolePermissions(roleId :number | null, permissions :
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             msg.displayMessageBox("Permisos del rol actualizados.", 'success');
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido actualizar los permisos del rol.", 'error');
         }
@@ -394,6 +472,7 @@ export async function updateRolePermissions(roleId :number | null, permissions :
 }
 
 
+/** Solicita un cambio del rol base del rol indicado. */
 export async function updateRoleParent(roleId :number | null, parentId :number | null) {
     if(roleId == null) {
         console.error("No hay rol seleccionado. No se actualizará nada.");
@@ -406,6 +485,9 @@ export async function updateRoleParent(roleId :number | null, parentId :number |
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             msg.displayMessageBox("Jerarquía de roles actualizada.", 'success');
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else if(data.cyclic) {
             msg.displayMessageBox("Un rol no puede basarse en sí mismo, directa o indirectamente.", 'error');
         } else {
@@ -419,6 +501,9 @@ export async function updateRoleParent(roleId :number | null, parentId :number |
 }
 
 
+/** Solicita la eliminación del rol indicado. Si hay al menos un usuario con dicho rol, se debe proveer también un rol de reemplazo
+ *  mediante `replaceWithRoleId`. En caso contrario, el servidor no eliminará el rol.
+ */
 export async function deleteRole(roleId :number | null, replaceWithRoleId :number | null) {
     if(roleId == null) {
         console.error("No hay rol seleccionado. No se eliminará nada.");
@@ -430,6 +515,9 @@ export async function deleteRole(roleId :number | null, replaceWithRoleId :numbe
         await utils.concludeAndWait(loadingHandler);
         if(data.success) {
             msg.displayMessageBox("Se ha eliminado el rol correctamente.", 'success');
+        } else if(data.expired) {
+            msg.displayMessageBox("Su sesión ha caducado. Por favor, inicie sesión de nuevo.", 'error',
+                () => window.location.href = "/login");
         } else {
             msg.displayMessageBox("No se ha podido eliminar el rol.", 'error');
         }
@@ -441,6 +529,7 @@ export async function deleteRole(roleId :number | null, replaceWithRoleId :numbe
 }
 
 
+/** Envía una petición REST a un endpoint del servidor. */
 async function fetchRequest(uri :string, rest :RequestMethod, body :any) {
     let fetchRequest = await fetch(uri, {
         method: rest,

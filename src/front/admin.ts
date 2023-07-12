@@ -3,6 +3,8 @@ import * as session from "./session.js";
 import * as utils from "./utils.js";
 import * as msg from "./message-box.js";
 
+// Este módulo es el índice para la pantalla del panel de administración.
+
 
 msg.preloadMsgBoxIcons();
 
@@ -22,10 +24,14 @@ function checkSession() {
         fetch("/am-i-admin", {method: "POST", credentials: "include"}).then(async response => {
             let data = await response.json();
             if(!data.admin) {
+                // Si entra en esta pantalla un usuario sin permisos de administrador (p.ej introduciendo la URI en su navegador), se le redirige
+                // a la pantalla de inicio de sesión. De todas formas, sin un token verificado como administrador, el servidor no responderá a las
+                // peticiones de esta pantalla.
                 window.location.href = "/login";
             }
         });
     } else {
+        // Si el usuario no ha iniciado sesión, le redirigimos a la pantalla de inicio de sesión.
         window.location.href = "/login";
     }
 }

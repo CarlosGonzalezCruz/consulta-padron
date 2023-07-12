@@ -1,10 +1,15 @@
 import * as db from "./db-queries.js";
 import * as utils from "./utils.js";
 
+// Este módulo procesa y gestiona los datos de habitante que se pueden enviar al cliente web según los permisos del usuario.
+
+/** Para mostrar en las entradas cuyo valor es nulo. */
 const NO_DATA_HTML = `<span class="no-data-indicator">Sin datos</span>`;
+/** Para mostrar en las entradas a las que el usuario no tiene permiso. */
 const NO_PERMISSION_HTML = `<span class="not-allowed-indicator">Sin autorización</span>`;
 
-const ENTRIES = [
+/** Lista de todas las entradas disponibles. Cada entrada corresponde a una o varias columnas de la base de datos que se pueden consultar. */
+const ENTRIES :EntryData[] = [
     {
         permissionKey: "full_name",
         displayKey: "Nombre completo",
@@ -132,13 +137,17 @@ const ENTRIES = [
 ];
 
 
+/** Devuelve una lista de las claves permitidas y sus valores correspondientes al habitante con el id proporcionado. */
 export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
     if(Object.keys(allowedKeys).length == 0) {
+        // Si el usuario no tiene permiso para consultar absolutamente nada, no merece la pena hacer la consulta contra la base de datos.
         return {
             success: false as const,
             unauthorized: true
         };
     }
+
+    // Se excluirán de la consulta las entradas no contempladas y las que no se tiene permiso.
     let selectedFields = ENTRIES.filter(e => allowedKeys.contains(e.permissionKey)).map(e => e.field).filter(utils.ensureNotNull);
     let query = await db.getInhabitantByIdDoc(idDoc, selectedFields);
     if(query.length == 0) {
@@ -150,13 +159,14 @@ export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
         return {
             success: true as const,
             idDoc: idDoc,
-            fullName: await calculateValues(query, {field: "HAB.NOMBRE_COMPLETO"}, allowedKeys.contains("full_name")),
+            fullName: await calculateValues(query, ENTRIES.find(e => e.field == "HAB.NOMBRE_COMPLETO")!, allowedKeys.contains("full_name")),
             entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query, e, allowedKeys.contains(e.permissionKey))))
         };
     }
 }
 
 
+/** Itera por todas las entradas disponibles. Cada entrada corresponde a una o varias columnas de la base de datos que se pueden consultar.  */
 export function* getPermissionEntries() {
     for(let entry of ENTRIES) {
         if(!entry.permissionKey) {
@@ -170,8 +180,10 @@ export function* getPermissionEntries() {
 }
 
 
-async function calculateValues(query :any, entry :any, hasPermission :boolean) {
+/** Prepara el valor de una entrada para mostrarlo al usuario. */
+async function calculateValues(query :{[key :string] :any}, entry :EntryData, hasPermission :boolean) {
     if(!hasPermission) {
+        // Sin permiso no hay mucho más que hacer.
         return {
             displayKey: entry.displayKey,
             displayValue: NO_PERMISSION_HTML,
@@ -179,9 +191,16 @@ async function calculateValues(query :any, entry :any, hasPermission :boolean) {
             value: null
         };
     }
+
+    // El displayValue es lo que va a ver el usuario en el cliente web. Coincidirá con el valor de la entrada excepto si la entrada
+    // especifica una función render. El valor crudo también se proveerá por si el caller o el cliente web quiere hacer algo con ello.
     let displayValue = "";
     let value :any = null;
+
     if(!!entry.field) {
+        // Los valores están almacenados en la query identificados con el nombre parcial de la columna, sin el prefijo de la tabla.
+        // Primero quitamos el prefijo (quedándonos solo con lo que está después del último punto) y luego obtenemos el valor de la query
+        // en base a eso.
         let effectiveField = entry.field.split('.').pop() as string;
         if(query.length == 0 || !query[0][effectiveField]) {
             value = null;
@@ -189,11 +208,13 @@ async function calculateValues(query :any, entry :any, hasPermission :boolean) {
             value = query[0][effectiveField];
         }
     }
+    // Aquí asignamos el displayValue según si hay función de render o no.
     if(!!entry.render && value != null) {
-        displayValue = await entry.render(value);
+        displayValue = (await entry.render(value)) as string;
     } else {
         displayValue = value;
     }
+    // Si hemos asignado un null, usamos el formato para valores nulos que tenemos.
     if(displayValue == null) {
         displayValue = NO_DATA_HTML;
     }

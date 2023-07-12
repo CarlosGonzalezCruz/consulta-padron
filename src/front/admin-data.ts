@@ -163,8 +163,8 @@ export async function populateList() {
     TABLE.empty();
 
     if(listCategory == "users") {
-        for(let user of data) {
-            if(!entryMatchesFilter(user.username)) {
+        for(let user of data!) {
+            if(!("username" in user) || !entryMatchesFilter(user.username)) {
                 continue;
             }
             let row = $("<tr>");
@@ -176,8 +176,8 @@ export async function populateList() {
             TABLE.append(row);
         }
     } else if(listCategory == "roles") {
-        for(let role of data) {
-            if(!entryMatchesFilter(role.name)) {
+        for(let role of data!) {
+            if(!("name" in role) || !entryMatchesFilter(role.name)) {
                 continue;
             }
             let row = $("<tr>");
@@ -461,7 +461,7 @@ function generateRolePermissionsRow(data :any, template :JQuery<Element>, tableB
     row.attr("permission-key", data.permissionKey);
     let rowHtml = row.html();
 
-    // Find all {{placeholders}} and replace them with the value corresponding to the field of the same name in received data
+    // Busca todos los {{placeholders}} y reemplázalos por el valor del campo con el mismo nombre en los datos recibidos.
     let matches = rowHtml.matchAll(/{{(\w*)}}/g);
 
     for(let match of matches) {
@@ -552,7 +552,7 @@ async function waitForRoleSelectorModalConfirmation() {
 }
 
 
-function generateRoleSelectorRows(roles :Role[]) {
+function generateRoleSelectorRows(roles :{id :number, name :string}[]) {
     let tableBody = $("#modal-role-selector-table");
     tableBody.children().remove();
 
@@ -573,8 +573,8 @@ function generateRoleSelectorRows(roles :Role[]) {
 }
 
 
-function enableRoleSelectorSearch(roles :Role[]) {
-    $("#modal-role-selector-search-field").off("input"); // Remove previous event
+function enableRoleSelectorSearch(roles :{id :number, name :string}[]) {
+    $("#modal-role-selector-search-field").off("input"); // Borra el evento anterior.
     $("#modal-role-selector-search-field").val("");
     $("#modal-role-selector-search-field").on("input", function() {
         if(roleSelectorSearchTimeout != null) {
@@ -613,7 +613,7 @@ async function manageRoleDeletion() {
             replacementRole = await waitForRoleSelectorModalConfirmation();
             replacementRolename = replacementRole != null ? (await adminFetch.fetchRole(replacementRole))?.name || "" : "";
             await utils.wait(250);
-        } catch(e) { // User cancelled modal
+        } catch(e) { // El usuario ha cancelado la ventana emergente.
             replacementRole = null;
             return;
         }
@@ -636,7 +636,7 @@ async function manageRoleDeletion() {
     });
     $("#modal-delete-role").one("hidden.bs.modal", () => {
         if(!success) {
-            $("#modal-delete-role-confirm").off("click"); // Clear so that it doesn't trigger the next time this modal appears
+            $("#modal-delete-role-confirm").off("click"); // Quitamos el evento para que no se ejecute la próxima vez que aparezca la ventana.
         }
     })
 }

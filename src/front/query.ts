@@ -3,6 +3,8 @@ import * as msg from "./message-box.js";
 import * as session from "./session.js";
 import * as utils from "./utils.js";
 
+// Este módulo es el índice de la pantalla de consulta de habitantes.
+
 
 query.enableSearch();
 query.enableTabs();
@@ -22,6 +24,7 @@ function checkSession() {
     if(session.exists()) {
         $("#session-username").text(session.getUsername()!);
     } else {
+        // Si no hay sesión, redirigimos automáticamente a la pantalla de inicio de sesión.
         window.location.href = "/login";
     }
 }

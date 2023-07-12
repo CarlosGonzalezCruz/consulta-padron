@@ -4,8 +4,12 @@ import * as dni from "./id-doc.js";
 import * as session from "./session.js";
 
 
-let lastResult :any;
+// Este módulo implementa la funcionalidad de la pantalla de consulta de habitantes.
 
+/** Aquí almacenamos los datos recibidos del habitante que se está consultando, para no tener que realizar una nueva consulta
+ *  al servidor si queremos volver a usarlos.
+ */
+let lastResult :any;
 
 export async function enableSearch() {
     await utils.documentReady();
@@ -83,7 +87,7 @@ export async function doLogout() {
     } catch(e) {
         await utils.concludeAndWait(loadingHandler);
         console.error(`Ha ocurrido un problema al cerrar sesión. Causa: ${e}`);
-        window.location.href = "/login";
+        msg.displayMessageBox("Ha ocurrido un problema al cerrar sesión.", 'error', () => window.location.href="/login");
     }
 }
 
@@ -176,6 +180,9 @@ async function fetchInhabitantDataByNationalId(id :string) {
 }
 
 
+/** Consulta al servidor si el usuario actual es administrador. Aunque tengamos los credenciales y el token en el cliente, no se puede
+ *  desencriptar en un navegador y dependemos del servidor para ello.
+ */
 async function isCurrentUserAdmin() {
     let fetchResult = await fetch("/am-i-admin", {
         method: "POST",
