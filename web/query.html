@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Consulta Padrón</title>
+
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.2.0/dist/css/bootstrap.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="style.css" />
+    </head>
+    <body class="adjust-to-screen">
+        <div class="container adjust-to-screen h-100 d-flex flex-column">
+            <div class="d-flex flex-row position-absolute justify-content-end">
+                <h4 id="environment-label" class="font-weight-light"></h4>
+            </div>
+            <div class="d-flex flex-column flex-grow-1 justify-content-center">
+                <div class="d-flex flex-column">
+                    <div class="rounded border form-group d-flex flex-row p-2">
+                        <div class="d-flex flex-row flex-fill justify-content-center">
+                            <div class="d-flex flex-row mx-2 mx-md-5">
+                                <div class="flex-grow-1"></div>
+                                <select id="dni-nie-passport-selector" class="custom-select fixed-w-120">
+                                    <option value="dni-nie" selected>DNI/NIE</option>
+                                    <option value="passport">Pasaporte</option>
+                                </select>
+                                <div class="mx-2">
+                                    <input id="inhabitant-id-field" name="DNI" class="w-100 form-control" placeholder="Número Identificador">
+                                </div>
+                                <button id="btn-search" class="btn btn-primary">
+                                    <img src="icons/search.svg" type="image/svg" class="mr-1 d-inline svg-inverted-color"></svg>
+                                    <p class="d-none d-sm-inline">Buscar</p>
+                                </div>
+                            </div>
+                        </div>
+                </div>
+                <div class="d-flex flex-row">
+                    <div class=" d-flex flex-column flex-md-row-reverse flex-fill">
+                        <div class="rounded border d-flex flex-column w-md-80 min-vh-50 mb-2 mb-md-0 p-3">
+                            <div id="inhabitant-data-container" class="d-flex flex-column flex-fill">
+                                <div id="default-placeholder" class="placeholder d-flex flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/person-vcard.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        Introduzca el Número Identificador de un habitante para comenzar.
+                                    </h5>
+                                </div>
+                                <div id="not-found-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/exclamation-circle.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        No existen datos de ningún habitante identificado como <span id="not-found-placeholder-id-number"></span>.
+                                    </h5>
+                                </div>
+                                <div id="unauthorized-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/x-circle.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        No cuenta con autorización para consultar ningún dato.
+                                    </h5>
+                                </div>
+                                <div id="inhabitant-data" class="d-none flex-column flex-fill justify-content-center">
+                                    <div class="d-flex flex-column flex-fill">
+                                        <h5 id="inhabitant-name" class="text-center text-uppercase mb-3"></h5>
+                                        <div class="h-0 overflow-y flex-fill">
+                                            <table id="inhabitant-data-table" class="table table-sm h-0">
+                                                <!-- Will be filled in runtime -->
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <button id="btn-generate-inhabitant-document" class="btn btn-link ml-auto pt-2">
+                                            <img src="icons/file-earmark-pdf.svg" class="img-fluid">
+                                            Generar documento
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 mr-md-3">
+                            <div id="inhabitant-tabs">
+                                <ul class="list-group">
+                                    <li class="list-group-item list-group-item-action disabled" tab-content="overview">Vista resumen</li>
+                                    <li class="list-group-item list-group-item-action disabled" tab-content="complete">Vista completa</li>                             
+                                </ul>
+                            </div>
+                            <div class="rounded border d-flex flex-row mt-2 mt-md-auto p-2 mw-100">
+                                <div class="d-flex flex-column flex-md-grow-1 align-middle">
+                                    <img src="icons/person-fill.svg" class="img-fluid svg-gray-color flex-fill p-1">
+                                </div>
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <div class="d-flex flex-row">
+                                        <b id="session-username">&lt;/&gt;</b>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <small id="admin-link" class="d-none btn-link">Administrar</small>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <small id="session-logout" class="btn-link">Cerrar sesión</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-dialog" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-3 d-flex justify-content-center">
+                                <img id="modal-dialog-icon" type="image/src" class="w-100 d-block svg-gray-color">
+                            </div>
+                            <div class="col-8 d-flex flex-row justify-content-center my-auto">
+                                <p class="align-middle flex-grow-1" id="modal-dialog-message"></p>
+                                <div id="modal-dialog-loading-spinner" class="flex-column justify-content-center" hidden>
+                                    <div class="spinner-border text-secondary float-right" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn btn-primary" data-dismiss="modal">Aceptar</div>
+                    </div>
+                </div>
+            </div>
+            <div id="modal-preloaded-icons" hidden>
+                <!-- Will be filled in runtime -->
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.6.3.slim.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+        <script src="query.js" type="module"></script>
+    </body>
+</html>

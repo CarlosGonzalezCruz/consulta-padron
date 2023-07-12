@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Consulta Padrón</title>
+
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.2.0/dist/css/bootstrap.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="style.css" />
+    </head>
+    <body class="adjust-to-screen">
+        <div class="container adjust-to-screen h-100 d-flex flex-column">
+            <div class="d-flex flex-row position-absolute justify-content-end">
+                <h4 id="environment-label" class="font-weight-light"></h4>
+            </div>
+            <div class="d-flex flex-column flex-grow-1 justify-content-center">
+                <div class="d-flex flex-row">
+                    <h1 class="d-none d-md-block admin-title">Panel de Administración</h1>
+                    <h1 class="d-block d-md-none admin-title">Administración</h1>
+                </div>
+                <div class="d-flex flex-row">
+                    <div class=" d-flex flex-column flex-md-row-reverse flex-fill">
+                        <div class="d-flex flex-column flex-md-row w-md-80 min-vh-50">
+                            <div id="user-role-list-container" class="d-flex flex-column flex-fill flex-md-grow-0 fixed-w-md-200 fixed-w-lg-300 rounded border mb-2 mb-md-0 mr-md-3 p-3">
+                                <input id="search-field" class="form-control mb-1" placeholder="Buscar...">
+                                <div class="h-0 min-h-px-40 overflow-y flex-fill mb-1">
+                                    <table id="user-role-list" class="w-100 table table-sm h-0 w-50">
+                                        <!-- Will be filled in runtime -->
+                                    </table>
+                                </div>
+                                <button id="user-button-create" class="btn btn-success d-none">
+                                    <img src="icons/person-fill-add.svg" class="svg-inverted-color img-fluid">
+                                    Añadir usuario
+                                </button>
+                                <button id="role-button-create" class="btn btn-success d-none">
+                                    <img src="icons/file-earmark-plus.svg" class="svg-inverted-color img-fluid">
+                                    Añadir rol
+                                </button>
+                            </div>
+                            <div id="user-role-details-container" class="d-flex flex-column flex-fill rounded border mb-2 mb-md-0 p-1">
+                                <div id="default-user-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/person-workspace.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        Seleccione un usuario de la lista.
+                                    </h5>
+                                </div>
+                                <div id="default-role-placeholder" class="placeholder d-none flex-column flex-fill justify-content-center align-items-center">
+                                    <img src="icons/card-checklist.svg" class="img-fluid svg-gray-color w-15 mb-3"/>
+                                    <h5 class="text-center">
+                                        Seleccione un rol de la lista.
+                                    </h5>
+                                </div>
+                                <div id="user-details-panel" class="d-none flex-column flex-fill p-3">
+                                    <div class="d-flex flex-column flex-fill h-0 min-h-px-40 mb-1 overflow-y">
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Usuario de LDAP</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="user-field-username"></span>
+                                                <img id="user-field-username-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div id="user-details-aux-admin-warning" class="d-none col-12">
+                                                <small class="login-error">
+                                                    Esta cuenta es auxiliar y no se puede modificar desde aquí. Cambie el perfil del servidor y reinícielo
+                                                    para aplicar los cambios.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Rol</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <a id="user-field-role" href="javascript:"></a>
+                                                <img id="user-field-role-edit" src="icons/list.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    El rol determina las entradas que el usuario puede ver, así como si puede acceder al panel
+                                                    de administración.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row w-100 px-2 ml-auto">
+                                        <div class="d-flex flex-column flex-lg-row align-items-end ml-auto">
+                                            <button id="user-button-delete" class="btn btn-danger ml-lg-auto disabled">
+                                                <img src="icons/person-fill-dash.svg" class="svg-inverted-color img-fluid">
+                                                Eliminar usuario
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="role-details-panel" class="d-none flex-column flex-fill p-3">
+                                    <div class="d-flex flex-column flex-fill h-0 min-h-px-40 mb-1 overflow-y">
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Nombre del rol</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-name"></span>
+                                                <img id="role-field-name-edit" src="icons/pencil-fill.svg" class="cursor-hover pl-2">
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Rol base</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-parent"></span>
+                                                <img id="role-field-parent-edit" src="icons/list.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    Si hay un rol base, se heredarán sus permisos excepto en los casos en los que se
+                                                    indique lo contrario.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Predeterminado</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-is-default"></span>
+                                                <img id="role-field-is-default-edit" src="icons/arrow-repeat.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    Las cuentas de nueva creación recibirán este rol hasta que se le asigne otro. Solo puede
+                                                    haber un rol predeterminado en un momento dado.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Administrador</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-is-admin"></span>
+                                                <img id="role-field-is-admin-edit" src="icons/arrow-repeat.svg" class="cursor-hover pl-2">
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="gray-text">
+                                                    Los usuarios con rol de administrador pueden acceder a este panel y editar los roles.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row w-100 p-2 my-auto">
+                                            <div class="col-5">
+                                                <b>Usuarios con este rol</b>
+                                            </div>
+                                            <div class="col-5">
+                                                <span id="role-field-user-amount"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row w-100 px-2 ml-auto">
+                                        <div class="d-flex flex-row align-items-end ml-auto">
+                                            <button id="role-button-permissions" class="btn btn-primary ml-auto">
+                                                <img src="icons/list-check.svg" class="svg-inverted-color img-fluid">
+                                                <p class="d-inline d-xl-none">Permisos</p>
+                                                <p class="d-none d-xl-inline">Cambiar permisos</p>
+                                            </button>
+                                            <button id="role-button-extend" class="btn btn-primary ml-1">
+                                                <img src="icons/file-earmark-text.svg" class="svg-inverted-color img-fluid">
+                                                <p class="d-inline d-xl-none">Derivado</p>
+                                                <p class="d-none d-xl-inline">Crear rol derivado</p>
+                                            </button>
+                                            <button id="role-button-delete" class="btn btn-danger ml-1 disabled">
+                                                <img src="icons/file-earmark-minus.svg" class="svg-inverted-color img-fluid">
+                                                <p class="d-inline d-xl-none">Eliminar</p>
+                                                <p class="d-none d-xl-inline">Eliminar rol</p>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 mr-md-3">
+                            <div id="user-role-tabs">
+                                <ul class="list-group">
+                                    <li class="list-group-item list-group-item-action" tab-content="users">Usuarios</li>
+                                    <li class="list-group-item list-group-item-action" tab-content="roles">Roles</li>                             
+                                </ul>
+                            </div>
+                            <div class="rounded border d-flex flex-row mt-2 mt-md-auto p-2 mw-100">
+                                <div class="d-flex flex-column flex-md-grow-1 align-middle">
+                                    <img src="icons/person-fill.svg" class="img-fluid svg-gray-color flex-fill p-1">
+                                </div>
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <div class="d-flex flex-row">
+                                        <b id="session-username">&lt;/&gt;</b>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <small id="admin-link" class="btn-link">Volver</small>
+                                    </div>
+                                    <div class="d-flex flex-row">
+                                        <small id="session-logout" class="btn-link">Cerrar sesión</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-dialog" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-3 d-flex justify-content-center">
+                                <img id="modal-dialog-icon" type="image/src" class="w-100 d-block svg-gray-color">
+                            </div>
+                            <div class="col-8 d-flex flex-row justify-content-center my-auto">
+                                <p class="align-middle flex-grow-1" id="modal-dialog-message"></p>
+                                <div id="modal-dialog-loading-spinner" class="flex-column justify-content-center" hidden>
+                                    <div class="spinner-border text-secondary float-right" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" data-dismiss="modal">Aceptar</div>
+                    </div>
+                </div>
+            </div>
+            <div id="modal-preloaded-icons" hidden>
+                <!-- Will be filled in runtime -->
+            </div>
+        </div>
+        <div id="modal-create-user" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Añadir usuario</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Introduzca el nombre LDAP del nuevo usuario</b>:</p>
+                        <input id="modal-create-user-input-field" type="text" class="form-control w-100" placeholder="Nombre de usuario">
+                        <small class="gray-text">
+                            El nombre introducido aquí debe coincidir exactamente con el nombre provisto por LDAP para el usuario que corresponda.
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-create-user-confirm" class="btn btn-success">Añadir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-update-username" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Cambiar nombre de usuario</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Nuevo nombre de usuario para <b><span id="modal-update-username-selected-username"></span></b>:</p>
+                        <input id="modal-update-username-input-field" type="text" class="form-control w-100" placeholder="Nombre de usuario">
+                        <small class="gray-text">
+                            El nombre introducido aquí debe coincidir exactamente con el nombre provisto por LDAP para el usuario que corresponda.
+                        </small>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-update-username-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-delete-user" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Eliminar usuario</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Se va a eliminar el usuario <b><span id="modal-delete-user-selected-username"></span></b>. ¿Seguro?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn btn-secondary" data-dismiss="modal">Cancelar</div>
+                        <div id="modal-delete-user-confirm" class="btn btn-danger" data-dismiss="modal">Eliminar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-create-role" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Añadir rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Introduzca el nombre del rol</b>:</p>
+                        <input id="modal-create-role-input-field" type="text" class="form-control w-100" placeholder="Nombre del rol">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-create-role-confirm" class="btn btn-success">Añadir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-update-rolename" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Cambiar nombre de rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Nuevo nombre para el rol <b><span id="modal-update-rolename-selected-username"></span></b>:</p>
+                        <input id="modal-update-rolename-input-field" type="text" class="form-control w-100" placeholder="Nombre del rol">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-update-rolename-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-role-permissions" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Permisos del rol <span id="modal-role-permissions-rolename"></span></h3>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modal-role-permissions-caption"></p>
+                        <div class="overflow-y vh-50">
+                            <table class="table table-sm h-0">
+                                <tbody id="modal-role-permissions-table">
+                                    <tr id="modal-role-permissions-table-row-template" class="jquery-hidden">
+                                        <td><b>{{displayKey}}</b></td>
+                                        <td>
+                                            <input field="allow" type="checkbox">
+                                            <small field="allow">Permitir</small>
+                                        </td>
+                                        <td class="d-none">
+                                            <input field="inherit" type="checkbox">
+                                            <small field="inherit">Heredar</small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-role-permissions-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-role-selector" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Seleccionar rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modal-role-selector-caption"></p>
+                        <input id="modal-role-selector-search-field" class="form-control my-1" placeholder="Buscar...">
+                        <div class="overflow-y vh-50">
+                            <table class="table table-sm h-0">
+                                <tbody id="modal-role-selector-table">
+                                    <!-- Will be filled in runtime -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="modal-role-selector-select-none" class="btn btn-link">Ninguno</button>
+                        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button id="modal-role-selector-confirm" class="btn btn-primary">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-delete-role" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Eliminar rol</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Se va a eliminar el rol <b><span id="modal-delete-role-selected-rolename"></span></b>.
+                            <span id="modal-delete-role-additional-info"></span> ¿Seguro?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn btn-secondary" data-dismiss="modal">Cancelar</div>
+                        <div id="modal-delete-role-confirm" class="btn btn-danger" data-dismiss="modal">Eliminar</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.6.3.slim.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+        <script src="admin.js" type="module"></script>
+    </body>
+</html>
