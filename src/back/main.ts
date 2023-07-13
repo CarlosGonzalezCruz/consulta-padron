@@ -4,6 +4,6 @@ import * as logging from "./logging.js";
 import * as db from "./db-queries.js";
 
 properties.initProperties();
-db.openMySQL();
 logging.setup();
+db.openMySQL();
 endpoints.listen();

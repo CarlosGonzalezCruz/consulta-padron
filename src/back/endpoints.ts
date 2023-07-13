@@ -21,7 +21,8 @@ export async function listen() {
     let httpPort = properties.get<number | null>("Application.http-port", null);
     https.createServer({ // Empezamos a escuchar peticiones REST.
         key: fs.readFileSync(properties.get<string>("Application.ssl-key")),
-        cert: fs.readFileSync(properties.get<string>("Application.ssl-cert"))
+        cert: fs.readFileSync(properties.get<string>("Application.ssl-cert")),
+        passphrase: properties.get<string>("Application.ssl-passphrase")
     }, APP).listen(httpsPort, () => {
         console.log(`(https) Atendiendo al puerto ${httpsPort}...`);
         if(httpPort != null) {
