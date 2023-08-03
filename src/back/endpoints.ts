@@ -1,5 +1,4 @@
 import fs from "fs";
-import https from "https";
 import express from "express";
 import * as inhabitant from "./inhabitant-data.js"
 import * as properties from "./properties.js";
@@ -19,11 +18,8 @@ export async function listen() {
     login.setup(APP); // Activamos el servidor de credenciales.
     let httpsPort = properties.get<number>("Application.https-port");
     let httpPort = properties.get<number | null>("Application.http-port", null);
-    https.createServer({ // Empezamos a escuchar peticiones REST.
-        key: fs.readFileSync(properties.get<string>("Application.ssl-key")),
-        cert: fs.readFileSync(properties.get<string>("Application.ssl-cert")),
-        passphrase: properties.get<string>("Application.ssl-passphrase")
-    }, APP).listen(httpsPort, () => {
+
+    express().listen(httpsPort, () => { // Esta versión del proyecto no utiliza HTTPS por ser una demostración.
         console.log(`(https) Atendiendo al puerto ${httpsPort}...`);
         if(httpPort != null) {
             setupHttpToHttpsRedirect(httpPort, httpsPort);

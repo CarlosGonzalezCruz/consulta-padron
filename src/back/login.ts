@@ -25,7 +25,7 @@ let ldapTimeout :string;
 export function setup(app :Express) {
     
     ldapSecret = properties.get("LDAP.secret");
-    ldapDomain = `@${properties.get("LDAP.domain")}`;
+    ldapDomain = `@${properties.get("LDAP.domain", "")}`;
     ldapTimeout = `${properties.get<number>("LDAP.timeout-s", 300)}s`;   
         
     fs.mkdirSync(SESSION_DB_PATH, {recursive: true}); // Aquí creamos el directorio para la base de datos de SQLite3 donde se almacenarán las sesiones.

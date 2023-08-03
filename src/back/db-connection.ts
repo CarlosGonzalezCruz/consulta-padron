@@ -1,23 +1,26 @@
-import OracleDB from "oracledb";
-import MySQL from "mysql2";
+import fs from "fs";
+import sqlite3 from "sqlite3";
 import * as properties from "./properties.js";
 
 
 // Este módulo administra conexiones y consultas contra bases de datos. Antes de conectar a una base de datos es necesario usar el método "open" que corresponda.
 
+const DB_PATHS = {
+    oracledb: "db/oracle.db",
+    mysql: "db/mysql.db"
+} as const;
 
-let oracledb :OracleDB.Connection | null;
+let oracledb :sqlite3.Database | null;
 let oracledbCloseTimeout :NodeJS.Timeout | null; // Referencia al objecto timeout para cerrar la conexión. Se puede resetear el timeout.
-let mysqldb :MySQL.Pool;
+let mysqldb :sqlite3.Database;
 
-let mysqlSchema = ""; // Nombre del esquema según las propiedades. No se pueden cargar fuera de funciones.
 let mysqldbLastRowCount = 0; // Cantidad de filas alteradas por la última consulta de MySQL.
                             // No siempre queremos actualizar este número, ya que algunas consultas (p.ej un SELECT simple) siempre indicará que se han actualizado 0 filas.
 
 
 /** Abre una connection pool para MySQL, y crea las tablas requeridas si no existen. La connection pool cerrará las conexiones en desuso automáticamente. */
 export async function openMySQL() {
-    mysqlSchema = properties.get("MySQL.schema");
+    ensureDirectoryExists(DB_PATHS.mysql);
     await establishMySQLConnection();
     await initTables();
 }
@@ -28,19 +31,17 @@ export async function openMySQL() {
  */
 export async function openOracleDB() {
     let success :boolean;
-    if(!!oracledb) {
-        // Si ya hay una conexión, no crees otra. Basta con atrasar el cierre de la conexión que ya tenemos.
-        resetCloseTimeout(closeOracleDB);
-        return;
-    }
+    ensureDirectoryExists(DB_PATHS.oracledb);
     try {
+        if(!!oracledb) {
+            resetCloseTimeout(closeOracleDB);
+        }
         await establishOracleDBConnection();
-        if(!!properties.get("Oracle.timeout-ms", 0)) { // Un valor de 0 o no definido indica que no hay timeout.
+        if(!!properties.get("Oracle.timeout-ms", 0)) {
             oracledbCloseTimeout = setTimeout(closeOracleDB, properties.get<number>("Oracle.timeout-ms"));
         }
         success = true;
     } catch(e) {
-        // No se pudo abrir una conexión a OracleDB.
         console.error(e.message);
         success = false;
     }
@@ -54,7 +55,7 @@ export async function closeOracleDB() {
         // ¿No tenemos conexión? No hay nada que hacer.
         return;
     }
-    await oracledb.close();
+    oracledb.close();
     oracledb = null;
     console.log("Conexión terminada con Oracle DB.");
     if(!!oracledbCloseTimeout) {
@@ -81,7 +82,7 @@ export function profileTable(tableName :string, prependSchema = true) {
     let suffix = properties.get<string>("MySQL.table-suffix", "");
     let ret = `${tableName}${!!suffix ? "_" : ""}${suffix ?? ""}`; // Solo se añade guión bajo si hay sufijo.
     if(prependSchema) {
-        ret = `${mysqlSchema}${mysqlSchema.length > 0 ? '.' : ''}${ret}`; // Solo se añade punto si hay prefijo.
+        // En la versión de muestra, no hacer nada.
     }
     return ret;
 }
@@ -99,52 +100,42 @@ export function getMySQLLastRowCount() {
  */
 export async function performQueryMySQL(query :string, updateMetaResults = false) :Promise<any> {
     return new Promise((resolve, reject) => {
-        mysqldb.getConnection((error, connection) => {
-            if(error) {
-                // La pool no nos ha podido entregar una conexión.
-                reject(error);
-                return;
-            }
-            connection.query(query, (error, result) => {
-                if(error) {
-                    // La conexión funciona, pero la consulta no ha sido fructífera.
+        mysqldb.all(query, (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                mysqldb.get(`SELECT SQLITE3_TOTAL_CHANGES() AS changes`, (err, row :any) => {
                     if(updateMetaResults) {
-                        mysqldbLastRowCount = -1;
-                    }
-                    reject(error);
-                } else {
-                    if(updateMetaResults) {
-                        // De acuerdo con la especificación de tipos de MySQL, el campo affectedRows se provee tras un número variable de capas de arrays.
-                        // Ni sabemos ni nos interesa esta estructura. Este fragmento de código contempla todas las posibilidades.
-                        if(result instanceof Array) {
-                            if(result[0] instanceof Array) {
-                                mysqldbLastRowCount = result[0][0].affectedRows;
-                            } else {
-                                mysqldbLastRowCount = result[0].affectedRows;
-                            }
+                        if (err) {
+                            reject(err);
                         } else {
-                            mysqldbLastRowCount = result.affectedRows;
+                            mysqldbLastRowCount = row.changes;
+                            resolve(rows);
                         }
+                    } else {
+                        resolve(rows);
                     }
-                    resolve(result); // Devolvemos el resultado de la consulta, si ha tenido éxito. El caller se encargará de interpretarlo.
-                }
-                connection.release(); // En cualquier caso ya no necesitamos esta conexión.
-            });
+                });
+            }
         });
     });
 }
 
 
 /** Realiza una consulta contra OracleDB. En principio, este programa no cuenta con permisos para insertar, alterar o borrar datos en OracleDB. */
-export async function performQueryOracleDB(query :string) {
+export async function performQueryOracleDB(query :string) :Promise<{[k :string] :any}[]> {
     if(!oracledb) {
-        // Si no hay conexión, la abrimos.
         await openOracleDB();
     }
     if(!!oracledbCloseTimeout) {
-        resetCloseTimeout(closeOracleDB); // Por si acaso, refrescamos la conexión de cara a otra posible consulta que venga inmediatamente después.
+        clearTimeout(oracledbCloseTimeout);
+        oracledbCloseTimeout = setTimeout(closeOracleDB, properties.get("Oracle.timeout-ms", 0));
     }
-    return oracledb!.execute(query);
+    return new Promise(resolve => {
+        oracledb!.all(query, (_, rows) => {
+            resolve(rows as {[k :string] :any}[]);
+        });
+    });
 }
 
 
@@ -162,29 +153,15 @@ function resetCloseTimeout(callback :() => void) {
  *  antes de realizar cualquier consulta contra OracleDB. La conexión se cerrará automáticamente cuando se cumpla el timeout.
  */
 async function establishOracleDBConnection() {
-    let ret :OracleDB.Connection;
-    try {
-        ret = await OracleDB.getConnection({
-            connectionString: `(DESCRIPTION=(ADDRESS_LIST=
-                    (ADDRESS=(PROTOCOL=${properties.get("Oracle.protocol", "TCP")})(HOST=${properties.get("Oracle.host")})(PORT=${properties.get("Oracle.port")})))
-                    (CONNECT_DATA=${properties.get("Oracle.dedicated-server", false) ? "(SERVER=DEDICATED)" : ""}(SERVICE_NAME=ORCL)))`,
-            user: properties.get<string>("Oracle.username"),
-            password: properties.get<string>("Oracle.password")
+    return new Promise((resolve, reject) => {
+        oracledb = new sqlite3.Database(DB_PATHS.oracledb, err => {
+            if(err) {
+                reject(err);
+            } else {
+                resolve(oracledb);
+            }
         });
-        console.log(`Conexión establecida con Oracle DB en ${properties.get("Oracle.host")}:${properties.get("Oracle.port")} como ${properties.get("Oracle.username")}.`);
-    } catch(e) {
-        throw new Error(`No se ha podido establecer la conexión con Oracle DB en ${properties.get("Oracle.host")}:${properties.get("Oracle.port")} como ${properties.get("Oracle.username")}. Causa: ${e}`);
-    }
-    try {
-        // Consulta trivial para ver si OracleDB está respondiendo.
-        console.log("Probando a realizar una consulta trivial con Oracle DB...");
-        await ret.execute("SELECT COUNT(1) FROM ALL_TABLES");
-        console.log("Consulta resuelta con Oracle DB.");
-        oracledb = ret;
-    } catch(e) {
-        throw new Error(`Oracle DB no está resolviendo consultas. Causa: ${e}`);
-    }
-    return ret;
+    });
 }
 
 
@@ -192,26 +169,23 @@ async function establishOracleDBConnection() {
  *  antes de realizar cualquier consulta contra MySQL. El módulo de MySQL se encargará de cerrar las conexiones cuando dejemos de usarlas.
  */
 async function establishMySQLConnection() {
-    let ret = MySQL.createPool({
-        connectionLimit: properties.get<number>("MySQL.connection-limit", 10),
-        host: properties.get<string>("MySQL.host"),
-        port: properties.get<number>("MySQL.port"),
-        user: properties.get<string>("MySQL.username"),
-        password: properties.get<string>("MySQL.password")
-    });
-    return new Promise<MySQL.Pool>((resolve, reject) => {
-        console.log(`Probando a crear una conexión con MySQL en ${properties.get("MySQL.host")}:${properties.get("MySQL.port")} como ${properties.get("MySQL.username")}.`);
-        // Consulta trivial para ver si MySQL está respondiendo.
-        ret.query("SELECT 1", (error, result) => {
-            if(error) {
-                throw new Error(`No se ha podido crear una conexión con MySQL o no está resolviendo consultas. Causa: ${error}`);
+    return new Promise((resolve, reject) => {
+        mysqldb = new sqlite3.Database(DB_PATHS.mysql, err => {
+            if(err) {
+                reject(err);
             } else {
-                console.log("Conexión verificada con MySQL.");
-                mysqldb = ret;
-                resolve(ret);
+                resolve(mysqldb);
             }
         });
     });
+}
+
+
+function ensureDirectoryExists(path: string) {
+    const dir = path.substring(0, path.lastIndexOf('/'));
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
 }
 
 
@@ -220,8 +194,8 @@ async function initTables() {
     let rolesTable = profileTable("ROLES", false);
     let usersTable = profileTable("USERS", false);
     // Estas consultas devolverán el número de tablas "ROLES" y "USERS" que existan (debería ser 0 ó 1).
-    let rolesTableExists = (await performQueryMySQL(`SHOW TABLES FROM ${mysqlSchema} LIKE '${rolesTable}'`)).length != 0;
-    let usersTableExists = (await performQueryMySQL(`SHOW TABLES FROM ${mysqlSchema} LIKE '${usersTable}'`)).length != 0;
+    let rolesTableExists = (await performQueryMySQL(`SELECT name FROM sqlite_master WHERE type='table' AND name='${rolesTable}'`)).length != 0;
+    let usersTableExists = (await performQueryMySQL(`SELECT name FROM sqlite_master WHERE type='table' AND name='${usersTable}'`)).length != 0;
 
     if(!rolesTableExists || !usersTableExists) {
         console.log(`Se van a crear las tablas necesarias en MySQL.`);
@@ -229,8 +203,8 @@ async function initTables() {
             // No tenemos tabla de roles, hay que crearla.
             try {
                 await performQueryMySQL(`
-                    CREATE TABLE ${mysqlSchema}.${rolesTable} (
-                        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    CREATE TABLE ${rolesTable} (
+                        id INTEGER PRIMARY KEY,
                         name TEXT,
                         isDefault VARCHAR(1) NOT NULL DEFAULT 'F',
                         isAdmin VARCHAR(1) NOT NULL DEFAULT 'F',
@@ -238,10 +212,8 @@ async function initTables() {
                         entries JSON,
                         CHECK(isDefault IN ('T', 'F')),
                         CHECK(isAdmin IN ('T', 'F')),
-                        FOREIGN KEY(parent)
-                            REFERENCES ${mysqlSchema}.${rolesTable}(id),
-                        INDEX id_idx (id)
-                    ) AUTO_INCREMENT = 101;
+                        FOREIGN KEY(parent) REFERENCES ${rolesTable}(id)
+                    );
                 `);
                 console.log(`Tabla ${rolesTable} creada en MySQL.`);
             } catch(e) {
@@ -252,17 +224,15 @@ async function initTables() {
             // No tenemos tabla de usuarios, hay que crearla.
             try {
                 await performQueryMySQL(`
-                    CREATE TABLE ${mysqlSchema}.${usersTable} (
-                        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                    CREATE TABLE ${usersTable} (
+                        id INTEGER PRIMARY KEY,
                         username VARCHAR(30) UNIQUE,
                         role INTEGER,
                         isAuxiliar VARCHAR(1) NOT NULL DEFAULT 'F',
                         CHECK(isAuxiliar IN ('T', 'F')),
                         FOREIGN KEY(role)
-                            REFERENCES ${mysqlSchema}.${rolesTable}(id),
-                        INDEX id_idx (id),
-                        INDEX username_idx (username)
-                    ) AUTO_INCREMENT = 1001;
+                            REFERENCES ${rolesTable}(id)
+                    );
                 `);
                 console.log(`Tabla ${usersTable} creada en MySQL.`);
             } catch(e) {
@@ -270,4 +240,122 @@ async function initTables() {
             }
         }
     }
+
+    openOracleDB();
+
+    oracledb!.exec(`
+        CREATE TABLE IF NOT EXISTS PMH_SIT_HABITANTE (
+            ID INTEGER PRIMARY KEY,
+            HABITANTE_ID INTEGER,
+            INSCRIPCION_ID INTEGER,
+            MOVIMIENTO_ID INTEGER,
+            VIVIENDA_ID INTEGER,
+            ES_ULTIMO TEXT,
+            ES_VIGENTE TEXT,
+            FOREIGN KEY (HABITANTE_ID) REFERENCES PMH_HABITANTE(DBOID),
+            FOREIGN KEY (INSCRIPCION_ID) REFERENCES PMH_INSCRIPCION(DBOID),
+            FOREIGN KEY (MOVIMIENTO_ID) REFERENCES PMH_MOVIMIENTO(DBOID),
+            FOREIGN KEY (VIVIENDA_ID) REFERENCES PMH_VIVIENDA(DBOID)
+        );
+
+        CREATE TABLE IF NOT EXISTS PMH_NIV_INSTRUCCION_T (
+            COD_NIVEL_INSTRUCCION TEXT PRIMARY KEY,
+            DESCRIPCION TEXT,
+            VALIDADO INTEGER
+        );
+        
+        CREATE TABLE IF NOT EXISTS PMH_HABITANTE (
+            DBOID INTEGER PRIMARY KEY,
+            DOC_IDENTIFICADOR TEXT,
+            NOMBRE_COMPLETO TEXT,
+            ALTA_MUNI_FECHA TEXT,
+            NACIM_FECHA TEXT,
+            SEXO_INE INTEGER,
+            TELEFONO TEXT,
+            TELEFONO_MOVIL TEXT,
+            FAX TEXT,
+            EMAIL TEXT,
+            COD_NIVEL_INSTRUCCION TEXT,
+            NOMBRE_PADRE TEXT,
+            NOMBRE_MADRE TEXT,
+            ES_PROTEGIDO TEXT,
+            ES_PARALIZADO TEXT,
+            NOMBRE_FONETICO TEXT,
+            NOMBRE_LATIN TEXT,
+            APELLIDO1_LATIN TEXT,
+            APELLIDO2_LATIN TEXT,
+            FOREIGN KEY (COD_NIVEL_INSTRUCCION) REFERENCES PMH_NIV_INSTRUCCION_T(COD_NIVEL_INSTRUCCION)
+        );
+        
+        CREATE TABLE IF NOT EXISTS PMH_INSCRIPCION (
+            DBOID INTEGER PRIMARY KEY
+        );
+        
+        CREATE TABLE IF NOT EXISTS PMH_MOVIMIENTO (
+            DBOID INTEGER PRIMARY KEY,
+            TIPO_MOVIMIENTO_ID INTEGER,
+            FECHA_OCURRENCIA TEXT
+        );
+        
+        CREATE TABLE IF NOT EXISTS CNF_MOVIMIENTO_PMH (
+            DBOID INTEGER PRIMARY KEY,
+            DESCRIPCION TEXT
+        );
+        
+        CREATE TABLE IF NOT EXISTS PMH_VIVIENDA (
+            DBOID INTEGER PRIMARY KEY,
+            ADDRESS TEXT,
+            CODIGO_POSTAL TEXT,
+            NUCLEO_DISEMINADO_NOMBRE TEXT
+        );
+
+        INSERT OR IGNORE INTO CNF_MOVIMIENTO_PMH (DBOID, DESCRIPCION) VALUES
+            (1, 'Modificación tipo documento'),
+            (2, 'Baja por no confirmación'),
+            (3, 'Baja duplicidad'),
+            (4, 'Baja Cambio Residencia'),
+            (5, 'Modificacion Datos Personales'),
+            (6, 'Alta omision'),
+            (7, 'Alta nacimiento'),
+            (8, 'Cambio Domicilio'),
+            (9, 'Alta cambio residencia'),
+            (10, 'Baja Inscripcion Indebida'),
+            (11, 'Baja defuncion'),
+            (12, 'Renovación Residencia'),
+            (13, 'Creacion padron'),
+            (14, 'Variación territorial'),
+            (15, 'Cambio Inscripción'),
+            (16, 'Cambio Inscripción de Vivienda'),
+            (17, 'Unificación Inscripción'),
+            (18, 'Baja Caducidad (ENCSARP)'),
+            (19, 'Confirmación residencia'),
+            (20, 'Baja de oficio'),
+            (21, 'Baja Inclusion sin INE'),
+            (22, 'Modif.dato domicilio'),
+            (23, 'Corr.datos sin ef.INE'),
+            (24, 'Modificación Seccionado'),
+            (25, 'Modificación de Hoja'),
+            (26, 'Modificación cód. ind.');
+
+        INSERT OR IGNORE INTO PMH_NIV_INSTRUCCION_T (COD_NIVEL_INSTRUCCION, DESCRIPCION, VALIDADO) VALUES
+            ('00', '00.- No aplicable menor de 16 años', 1),
+            ('10', '10.- No sabe leer ni escribir', 1),
+            ('11', '11.- No sabe leer ni escribir', 1),
+            ('20', '20.- Titulación inferior a graduado escolar', 1),
+            ('21', '21.- Sin estudios', 1),
+            ('22', '22.- Primaria o EGB incompleta, Cert. Escolaridad', 1),
+            ('30', '30.- Graduado escolar o equivalente', 1),
+            ('31', '31.- Bachiller, Graduado Escolar, EGB, Primaria, ESO.', 1),
+            ('32', '32.- FP 1, FP de Grado Medio. Oficialía Industrial - Ciclo medio', 1),
+            ('40', '40.- Bachiller, FP2, equivalente o superiores, Ciclos superiores', 1),
+            ('41', '41.- Formación Profesional Segundo Grado. Formación profesional de Grado Superior. Maestría industrial', 1),
+            ('42', '42.- Bachiller superior. BUP. Bachiller LOGSE', 1),
+            ('43', '43.- Otras titulaciones medias (Aux. Clínica, Prog. informático, Auxiliar de vuelo, Diplomados Artes)', 1),
+            ('44', '44.- Diplomados Universitarios (Empresariales, Profesorado, ATS, etc.)', 1),
+            ('45', '45.- Arquitecto. Ingeniero Técnico', 1),
+            ('46', '46.- Licenciado Universitario. Arquitecto. Ing. Superior', 1),
+            ('47', '47.- Titulados de Estudios Superiores no universitarios', 1),
+            ('48', '48.- Doctorado y Estudios de postgrados', 1),
+            ('99', '99.- Desconocido', 1);
+    `);
 }

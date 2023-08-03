@@ -150,7 +150,7 @@ export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
     // Se excluirán de la consulta las entradas no contempladas y las que no se tiene permiso.
     let selectedFields = ENTRIES.filter(e => allowedKeys.contains(e.permissionKey)).map(e => e.field).filter(utils.ensureNotNull);
     let query = await db.getInhabitantByIdDoc(idDoc, selectedFields);
-    if(query.length == 0) {
+    if(query == null || query.length == 0) {
         return {
             success: false as const,
             unauthorized: false
@@ -160,7 +160,7 @@ export async function generateEntriesFor(idDoc :string, allowedKeys :string[]) {
             success: true as const,
             idDoc: idDoc,
             fullName: await calculateValues(query, ENTRIES.find(e => e.field == "HAB.NOMBRE_COMPLETO")!, allowedKeys.contains("full_name")),
-            entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query, e, allowedKeys.contains(e.permissionKey))))
+            entries: (await ENTRIES.filter(e => !e.hide).asyncMap(e => calculateValues(query!, e, allowedKeys.contains(e.permissionKey))))
         };
     }
 }

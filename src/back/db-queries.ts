@@ -36,17 +36,17 @@ export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
     }
     let result = await db.performQueryOracleDB(
         `
-            SELECT ${fields.join(",")} FROM REPOS.PMH_SIT_HABITANTE SIT
-            LEFT JOIN REPOS.PMH_HABITANTE HAB ON HAB.DBOID = SIT.HABITANTE_ID
-            LEFT JOIN REPOS.PMH_INSCRIPCION INS ON INS.DBOID = SIT.INSCRIPCION_ID
-            LEFT JOIN REPOS.PMH_MOVIMIENTO MOV ON MOV.DBOID = SIT.MOVIMIENTO_ID
-            LEFT JOIN REPOS.CNF_MOVIMIENTO_PMH CNF_MOV ON CNF_MOV.DBOID = MOV.TIPO_MOVIMIENTO_ID
-            LEFT JOIN REPOS.PMH_VIVIENDA VIV ON VIV.DBOID = SIT.VIVIENDA_ID
+            SELECT ${fields.join(",")} FROM PMH_SIT_HABITANTE SIT
+            LEFT JOIN PMH_HABITANTE HAB ON HAB.DBOID = SIT.HABITANTE_ID
+            LEFT JOIN PMH_INSCRIPCION INS ON INS.DBOID = SIT.INSCRIPCION_ID
+            LEFT JOIN PMH_MOVIMIENTO MOV ON MOV.DBOID = SIT.MOVIMIENTO_ID
+            LEFT JOIN CNF_MOVIMIENTO_PMH CNF_MOV ON CNF_MOV.DBOID = MOV.TIPO_MOVIMIENTO_ID
+            LEFT JOIN PMH_VIVIENDA VIV ON VIV.DBOID = SIT.VIVIENDA_ID
             WHERE HAB.DOC_IDENTIFICADOR = '${idDoc}' AND SIT.ES_ULTIMO = 'T'
             FETCH NEXT 1 ROWS ONLY
         `
     );
-    return mapOracleDBResult(result);
+    return result.length > 0 ? result[0] : null;
 }
 
 
@@ -58,7 +58,7 @@ export async function getAcademicLevelDescription(id :number) {
             WHERE DESCRIPCION LIKE '${id}%' AND VALIDATED=1
         `
     );
-    let rows = mapOracleDBResult(result);
+    let rows = result;
     if(!!rows && rows.length > 0) {
         return rows[0].DESCRIPCION as string;
     } else {
@@ -432,4 +432,55 @@ async function isRoleInParentChain(startingId :number, searchingId :number) {
     } while(current != null); // El bucle se romperá cuando hayamos dado con un rol que no tenga base.
     // Hemos llegado al final sin encontrar nada.
     return false;
+}
+
+
+export async function getAmountOfInhabitants() {
+    let result = await db.performQueryOracleDB(`
+        SELECT COUNT(*) AS COUNT FROM PMH_SIT_HABITANTE; 
+    `) as {COUNT :number}[];
+
+    return result.length == 0 ? 0 : result[0].COUNT;
+}
+
+
+export async function insertShowcaseInhabitant(inhabitant :Inhabitant) {
+    let isRegistered = inhabitant.isRegistered === null ? "NULL" : inhabitant.isRegistered;
+    let registrationDate = inhabitant.registrationDate === null ? "NULL" : `'${inhabitant.registrationDate}'`;
+    let birthDate = inhabitant.birthDate === null ? "NULL" : `'${inhabitant.birthDate}'`;
+    let gender = inhabitant.gender === null ? "NULL" : `'${inhabitant.gender}'`;
+    let landlinePhone = inhabitant.landlinePhone === null ? "NULL" : `'${inhabitant.landlinePhone}'`;
+    let mobilePhone = inhabitant.mobilePhone === null ? "NULL" : `'${inhabitant.mobilePhone}'`;
+    let faxNumber = inhabitant.faxNumber === null ? "NULL" : `'${inhabitant.faxNumber}'`;
+    let email = inhabitant.email === null ? "NULL" : `'${inhabitant.email}'`;
+    let instructionLevel = inhabitant.instructionLevel === null ? "NULL" : inhabitant.instructionLevel;
+    let lastMoveDate = inhabitant.lastMoveDate === null ? "NULL" : `'${inhabitant.lastMoveDate}'`;
+    let lastMoveType = inhabitant.lastMoveType === null ? "NULL" : `${inhabitant.lastMoveType}`;
+    let fatherName = inhabitant.fatherName === null ? "NULL" : `'${inhabitant.fatherName}'`;
+    let motherName = inhabitant.motherName === null ? "NULL" : `'${inhabitant.motherName}'`;
+    let isProtected = inhabitant.isProtected === null ? "NULL" : inhabitant.isProtected;
+    let isParalyzed = inhabitant.isParalyzed === null ? "NULL" : inhabitant.isParalyzed;
+    let phoneticName = inhabitant.phoneticName === null ? "NULL" : `'${inhabitant.phoneticName}'`;
+    let latinizedName = inhabitant.latinizedName === null ? "NULL" : `'${inhabitant.latinizedName}'`;
+    let latinizedSurname1 = inhabitant.latinizedSurname1 === null ? "NULL" : `'${inhabitant.latinizedSurname1}'`;
+    let latinizedSurname2 = inhabitant.latinizedSurname2 === null ? "NULL" : `'${inhabitant.latinizedSurname2}'`;
+    let address = inhabitant.address === null ? "NULL" : `'${inhabitant.address}'`;
+    let postalCode = inhabitant.postalCode === null ? "NULL" : `'${inhabitant.postalCode}'`;
+    let municipality = inhabitant.municipality === null ? "NULL" : `'${inhabitant.municipality}'`;
+
+    await db.performQueryOracleDB(`INSERT INTO PMH_HABITANTE (NOMBRE_COMPLETO, DOC_IDENTIFICADOR, ALTA_MUNI_FECHA, NACIM_FECHA, SEXO_INE, TELEFONO, TELEFONO_MOVIL, FAX, EMAIL, COD_NIVEL_INSTRUCCION, NOMBRE_PADRE, NOMBRE_MADRE, ES_PROTEGIDO, ES_PARALIZADO, NOMBRE_FONETICO, NOMBRE_LATIN, APELLIDO1_LATIN, APELLIDO2_LATIN) VALUES ('${inhabitant.fullName}', '${inhabitant.idDoc}', ${registrationDate}, ${birthDate}, ${gender}, ${landlinePhone}, ${mobilePhone}, ${faxNumber}, ${email}, ${instructionLevel}, ${fatherName}, ${motherName}, ${isProtected}, ${isParalyzed}, ${phoneticName}, ${latinizedName}, ${latinizedSurname1}, ${latinizedSurname2})`);
+    await db.performQueryOracleDB(`INSERT INTO PMH_INSCRIPCION () VALUES ()`);
+    await db.performQueryOracleDB(`INSERT INTO PMH_MOVIMIENTO (TIPO_MOVIMIENTO_ID, FECHA_OCURRENCIA) VALUES (${lastMoveType}, ${lastMoveDate})`);
+    await db.performQueryOracleDB(`INSERT INTO PMH_VIVIENDA (NUCLEO_DISEMINADO_NOMBRE, CODIGO_POSTAL, ADDRESS) VALUES (${municipality}, ${postalCode}, ${address})`);
+
+    let currentDboids = {
+        "habitante": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_HABITANTE"),
+        "inscripcion": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_INSCRIPCION"),
+        "movimiento": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_MOVIMIENTO"),
+        "vivienda": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_VIVIENDA"),
+    };
+
+    await db.performQueryOracleDB(`INSERT INTO PMH_SIT_HABITANTE (HABITANTE_ID, INSCRIPCION_ID, MOVIMIENTO_ID, VIVIENDA_ID, ES_ULTIMO, ES_VIGENTE) VALUES
+        (${currentDboids.habitante}, ${currentDboids.inscripcion}, ${currentDboids.movimiento}, ${currentDboids.vivienda}, 'T', ${isRegistered})
+    `);
 }

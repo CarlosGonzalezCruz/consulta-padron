@@ -4,5 +4,6 @@ out/**
 db/**
 properties/**
 !properties/template.ini
+!properties/demo.ini
 ssl/**
 build/**
