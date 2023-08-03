@@ -26,13 +26,13 @@ const ENTRIES :EntryData[] = [
         permissionKey: "registration_date",
         displayKey: "Fecha de alta",
         field: "HAB.ALTA_MUNI_FECHA",
-        render: (v :Date) => utils.writeDate(v)
+        render: (v :string) => utils.writeDate(v)
     },
     {
         permissionKey: "birth_date",
         displayKey: "Fecha de nacimiento",
         field: "HAB.NACIM_FECHA",
-        render: (v :Date) => utils.writeDate(v)
+        render: (v :string) => utils.writeDate(v)
     },
     {
         permissionKey: "gender",
@@ -70,7 +70,7 @@ const ENTRIES :EntryData[] = [
         permissionKey: "last_move_date",
         displayKey: "Fecha último movimiento",
         field: "MOV.FECHA_OCURRENCIA",
-        render: (v :Date) => utils.writeDate(v) 
+        render: (v :string) => utils.writeDate(v) 
     },
     {
         permissionKey: "last_move_description",
@@ -202,10 +202,10 @@ async function calculateValues(query :{[key :string] :any}, entry :EntryData, ha
         // Primero quitamos el prefijo (quedándonos solo con lo que está después del último punto) y luego obtenemos el valor de la query
         // en base a eso.
         let effectiveField = entry.field.split('.').pop() as string;
-        if(query.length == 0 || !query[0][effectiveField]) {
+        if(!(effectiveField in query)) {
             value = null;
         } else {
-            value = query[0][effectiveField];
+            value = query[effectiveField];
         }
     }
     // Aquí asignamos el displayValue según si hay función de render o no.

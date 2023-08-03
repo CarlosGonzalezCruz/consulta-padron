@@ -48,14 +48,12 @@ const STREET_NAMES = [
     "Cl San Marcos", "Av Felicidad", "Cl San Miguel", "Av Almendros"
 ] as const;
 
-const GENDER = [0, 1, 6] as const;
-
 const INSTRUCTION_LEVELS = ['00', '10', '11', '20', '21', '22', '30', '31', '32', '40', '41', '42', '43', '44', '45', '46', '47', '48', '99'] as const;
 
 const MOV_SIGN_ON = [1, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 19, 23, 24, 25, 26] as const;
 const MOV_SIGN_OFF = [2, 3, 4, 10, 11, 18, 20, 21, 22] as const;
 
-const WANTED_INHABITANTS = 200;
+const WANTED_INHABITANTS = 20;
 
 
 export async function generateShowcaseInhabitants() {
@@ -71,32 +69,34 @@ export async function generateShowcaseInhabitants() {
             process.stdout.cursorTo(0);
         }
 
-        let gender = Math.random() < 0.95 ? 0 : Math.random() < 0.5 ? 1 : 6;
-        let fullName = [pickRandom(gender == 0 ? ANY_GENDER_NAMES : gender == 1 ? MEN_NAMES : WOMEN_NAMES), pickRandom(LAST_NAMES), pickRandom(LAST_NAMES)];
+        let gender = Math.random() < 0.05 ? 0 : Math.random() < 0.5 ? 1 : 6;
+        let fullName = [pickRandom(gender == 0 ? ANY_GENDER_NAMES : gender == 1 ? MEN_NAMES : WOMEN_NAMES).toUpperCase(), pickRandom(LAST_NAMES).toUpperCase(), pickRandom(LAST_NAMES).toUpperCase()];
         let registered = Math.random() < 0.7;
+        let birthDate = getRandomDate(dateFromYearsAgo(60), dateFromYearsAgo(10));
+        let registrationDate = getRandomDate(birthDate, dateFromYearsAgo(2));
 
         let inhabitant :Inhabitant = {
             idDoc: generateRandomIdentifierDoc(),
             fullName: fullName.join(' '),
             isRegistered: toDBBinary(registered),
-            registrationDate: getRandomDate(dateFromYearsAgo(50), dateFromYearsAgo(2)).toISOString(),
-            birthDate: getRandomDate(dateFromYearsAgo(90), dateFromYearsAgo(20)).toISOString(),
+            registrationDate: registrationDate.toISOString(),
+            birthDate: birthDate.toISOString(),
             gender,
             landlinePhone: Math.random() < 0.3 ? getRandomLandlinePhoneNumber() : null,
             mobilePhone: Math.random() < 0.3 ? getRandomMobilePhoneNumber() : null,
             faxNumber: Math.random() < 0.05 ? getRandomMobilePhoneNumber() : null,
-            email: Math.random() < 0.3 ? getRandomEmail(fullName[0], fullName[0]) : null,
+            email: Math.random() < 0.3 ? getRandomEmail(fullName[0], fullName[1]) : null,
             instructionLevel: pickRandom(INSTRUCTION_LEVELS),
-            lastMoveDate: getRandomDate(dateFromYearsAgo(20), dateFromYearsAgo(1)).toISOString(),
+            lastMoveDate: getRandomDate(registrationDate, dateFromYearsAgo(1)).toISOString(),
             lastMoveType: pickRandom(registered ? MOV_SIGN_ON : MOV_SIGN_OFF),
-            fatherName: Math.random() < 0.3 ? pickRandom(MEN_NAMES) : null,
-            motherName: Math.random() < 0.3 ? pickRandom(WOMEN_NAMES) : null,
+            fatherName: Math.random() < 0.3 ? pickRandom(MEN_NAMES).toUpperCase() : null,
+            motherName: Math.random() < 0.3 ? pickRandom(WOMEN_NAMES).toUpperCase() : null,
             isProtected: toDBBinary(Math.random() < 0.1),
             isParalyzed: toDBBinary(Math.random() < 0.1),
-            phoneticName: generatePhoneticName(fullName[0]),
-            latinizedName: generatePhoneticName(fullName[0]),
-            latinizedSurname1: generatePhoneticName(fullName[1]),
-            latinizedSurname2: generatePhoneticName(fullName[2]),
+            phoneticName: generatePhoneticName(fullName.join(' ')),
+            latinizedName: fullName[0],
+            latinizedSurname1: fullName[1],
+            latinizedSurname2: fullName[2],
             address: getRandomAddress(),
             postalCode: generateRandomPostalCode(),
             municipality: "ALCALÁ DE HENARES"
@@ -139,7 +139,7 @@ function getRandomLandlinePhoneNumber() {
 
 function getRandomMobilePhoneNumber() {
     let prefix = Math.floor(Math.random() * 2) + 6; // Prefijo aleatorio entre 6 y 7
-    let randomNumber = Math.floor(Math.random() * 900000000) + 100000000;
+    let randomNumber = Math.floor(Math.random() * 90000000) + 10000000;
     return `+34 ${prefix}${randomNumber}`;
 }
   
@@ -148,18 +148,23 @@ function getRandomEmail(firstName :string, lastName :string) {
     let domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com'];
     let randomDigits = Math.floor(Math.random() * 10000);
     let randomDomain = domains[Math.floor(Math.random() * domains.length)];
-    return `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomDigits}@${randomDomain}`;
+    return `${removeDiacritics(firstName.toLowerCase())}.${removeDiacritics(lastName.toLowerCase())}${randomDigits}@${randomDomain}`;
+}
+
+
+function removeDiacritics(str: string): string {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
   
 
 function generatePhoneticName(name :string) {
-    return name.replace(/[aeiou]/gi, '');
+    return name.replace(/[aeiouáéíóúü]/gi, '');
 }
 
 
 function getRandomAddress() {
     let randomIndex = Math.floor(Math.random() * STREET_NAMES.length);
-    let randomStreet = STREET_NAMES[randomIndex];
+    let randomStreet = STREET_NAMES[randomIndex].toUpperCase();
     let randomNumber = Math.floor(Math.random() * 150) + 1;
     return `${randomStreet} ${randomNumber}`;
 }
@@ -188,6 +193,6 @@ function toDBBinary(value :boolean): DBBinary {
 
 function dateFromYearsAgo(years :number) {
     let date = new Date();
-    date.setFullYear(date.getFullYear() - 50);
+    date.setFullYear(date.getFullYear() - years);
     return date;
 }

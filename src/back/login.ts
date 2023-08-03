@@ -1,6 +1,5 @@
 import fs from "fs";
 import passport from "passport";
-import ldap from "ldapjs";
 import { Express } from "express";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
@@ -8,6 +7,7 @@ import SQLiteStoreFactory from "connect-sqlite3";
 import jwt from "jsonwebtoken";
 import * as permissions from "./permissions.js";
 import * as properties from "./properties.js";
+import * as db from "./db-queries.js";
 import * as utils from "./utils.js";
 
 
@@ -16,7 +16,6 @@ import * as utils from "./utils.js";
 
 const SESSION_DB_PATH = "db";
 
-let ldapClient :ldap.Client;
 let ldapDomain :string;
 let ldapSecret :string;
 let ldapTimeout :string;
@@ -44,7 +43,7 @@ export function setup(app :Express) {
         usernameField: "User",
         passwordField: "Password",
         session: true,
-    }, (username, password, done) => { // Esto se ejecutará una vez Passport reciba la señal de hacer login, pero antes de verificar las credenciales.
+    }, async (username, password, done) => { // Esto se ejecutará una vez Passport reciba la señal de hacer login, pero antes de verificar las credenciales.
         
         // Comprobamos si el usuario se está identificando con el administrador auxiliar, si está activado.
         if(properties.get("Admin.enabled", true)) {
@@ -90,31 +89,27 @@ export function setup(app :Express) {
         initOrResetLdapClient();
 
         // Intentamos validar la cuenta de LDAP con la contraseña recibida.
-        ldapClient.bind(baseDN, password, error => {
-            if(error) {
-                // O el usuario no existe o la contraseña es incorrecta.
-                console.error(`La autenticación ha fallado. Causa: ${error}`);
-                done(error, false);
-            } else {
-                permissions.identify(username).then(user => {
-                    // Credenciales correctas. Iniciamos sesión.
-                    done(null, {
-                        username,
-                        token: jwt.sign({username: user.username, isAdmin: user.isAdmin == 'T'}, ldapSecret, {expiresIn: ldapTimeout})
-                    });
-                }).catch(e => {
-                    // Credenciales correctas, pero el programa está configurado para no permitir cuentas nuevas a no ser que un administrador las cree,
-                    // y este usuario no estaba previamente en la base de datos.
-                    console.error(`El usuario ${username}, no registrado previamente, ha intentado acceder y se le ha denegado el acceso. Causa: ${e}`);
-                    done(Error(`No cuenta con autorización para acceder a este aplicativo. Póngase en contacto con un administrador.`), false);
+        let ldapLoginSuccess = await db.areLDAPCredentialsValid(username, password);
+        if(ldapLoginSuccess) {
+            permissions.identify(username).then(user => {
+                // Credenciales correctas. Iniciamos sesión.
+                done(null, {
+                    username,
+                    token: jwt.sign({username: user.username, isAdmin: user.isAdmin == 'T'}, ldapSecret, {expiresIn: ldapTimeout})
                 });
-            }
-            // No necesitamos mantener la conexión al cliente de LDAP.
-            ldapClient.unbind();
-            ldapClient.destroy();
+            }).catch(e => {
+                // Credenciales correctas, pero el programa está configurado para no permitir cuentas nuevas a no ser que un administrador las cree,
+                // y este usuario no estaba previamente en la base de datos.
+                console.error(`El usuario ${username}, no registrado previamente, ha intentado acceder y se le ha denegado el acceso. Causa: ${e}`);
+                done(Error(`No cuenta con autorización para acceder a este aplicativo. Póngase en contacto con un administrador.`), false);
             });
-        })
-    );
+        } else {
+            // O el usuario no existe o la contraseña es incorrecta.
+            let error = Error("Invalid Credentials");
+            console.error(`La autenticación ha fallado. Causa: ${error}`);
+            done(error, false);
+        }
+    }));
 
     // Requerido por Passport.
     passport.serializeUser((user, done) => done(null, user));
@@ -127,13 +122,7 @@ export function setup(app :Express) {
 
 /** Crea un nuevo cliente de LDAP a la dirección especificada en las propiedades, y destruye el cliente anterior si lo hay. */
 function initOrResetLdapClient() {
-    if(!!ldapClient) {
-        ldapClient.destroy();
-    }
-    ldapClient = ldap.createClient({
-        url: properties.get<string>("LDAP.address"),
-        reconnect: true
-    });
+    // No implementado en esta versión
 }
 
 

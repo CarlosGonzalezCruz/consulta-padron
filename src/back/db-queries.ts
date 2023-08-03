@@ -1,4 +1,3 @@
-import { Result } from "oracledb";
 import * as db from "./db-connection.js"
 import * as utils from "./utils.js";
 
@@ -43,7 +42,6 @@ export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
             LEFT JOIN CNF_MOVIMIENTO_PMH CNF_MOV ON CNF_MOV.DBOID = MOV.TIPO_MOVIMIENTO_ID
             LEFT JOIN PMH_VIVIENDA VIV ON VIV.DBOID = SIT.VIVIENDA_ID
             WHERE HAB.DOC_IDENTIFICADOR = '${idDoc}' AND SIT.ES_ULTIMO = 'T'
-            FETCH NEXT 1 ROWS ONLY
         `
     );
     return result.length > 0 ? result[0] : null;
@@ -54,8 +52,8 @@ export async function getInhabitantByIdDoc(idDoc :string, fields :string[]) {
 export async function getAcademicLevelDescription(id :number) {
     let result = await db.performQueryOracleDB(
         `
-            SELECT DESCRIPCION FROM REPOS.PMH_NIV_INSTRUCCION_T
-            WHERE DESCRIPCION LIKE '${id}%' AND VALIDATED=1
+            SELECT DESCRIPCION FROM PMH_NIV_INSTRUCCION_T
+            WHERE DESCRIPCION LIKE '${id}%' AND VALIDADO=1
         `
     );
     let rows = result;
@@ -64,23 +62,6 @@ export async function getAcademicLevelDescription(id :number) {
     } else {
         return null;
     }
-}
-
-
-/** Convierte el resultado crudo de una consulta de OracleDB en un objeto `{clave: valor}` usable en Typescript. */
-function mapOracleDBResult<T>(result :Result<T>) {
-    let ret :{[k :string] :any}[] = [];
-    // Los nombres de las columnas se proveen como metadatos, y los valores se proveen por separado de las columnas, pero en el mismo orden.
-    for(let row of result.rows!) {
-        let rowMap :{[k :string] :T} = {};
-        // @ts-ignore row siempre es un Array pero la especificación de tipos de Oracle no está de acuerdo.
-        let rowItems :T[] = row;
-        for(let i = 0; i < rowItems.length; i++) {
-            rowMap[result.metaData![i].name] = rowItems[i];
-        }
-        ret.push(rowMap);
-    }
-    return ret;
 }
 
 
@@ -435,6 +416,31 @@ async function isRoleInParentChain(startingId :number, searchingId :number) {
 }
 
 
+export async function areLDAPCredentialsValid(username :string, password :string) {
+    let result = await db.performQueryLDAP(`
+        SELECT 1 FROM USERS WHERE USERNAME='${username}' AND PASSWORD='${password}';
+    `) as (1)[];
+    return result.length > 0;
+}
+
+
+export async function getAmountOfLDAPAccounts() {
+    let result = await db.performQueryLDAP(`
+        SELECT COUNT(*) AS COUNT FROM USERS; 
+    `) as {COUNT :number}[];
+    
+    return result.length == 0 ? 0 : result[0].COUNT;
+}
+
+
+export async function inserUserLDAPAccount(username :string, password :string) {
+    await db.performQueryLDAP(`
+        INSERT INTO USERS (USERNAME, PASSWORD) VALUES
+            ('${username}', '${password}')
+    `);
+}
+
+
 export async function getAmountOfInhabitants() {
     let result = await db.performQueryOracleDB(`
         SELECT COUNT(*) AS COUNT FROM PMH_SIT_HABITANTE; 
@@ -445,7 +451,7 @@ export async function getAmountOfInhabitants() {
 
 
 export async function insertShowcaseInhabitant(inhabitant :Inhabitant) {
-    let isRegistered = inhabitant.isRegistered === null ? "NULL" : inhabitant.isRegistered;
+    let isRegistered = inhabitant.isRegistered === null ? "NULL" : `'${inhabitant.isRegistered}'`;
     let registrationDate = inhabitant.registrationDate === null ? "NULL" : `'${inhabitant.registrationDate}'`;
     let birthDate = inhabitant.birthDate === null ? "NULL" : `'${inhabitant.birthDate}'`;
     let gender = inhabitant.gender === null ? "NULL" : `'${inhabitant.gender}'`;
@@ -458,8 +464,8 @@ export async function insertShowcaseInhabitant(inhabitant :Inhabitant) {
     let lastMoveType = inhabitant.lastMoveType === null ? "NULL" : `${inhabitant.lastMoveType}`;
     let fatherName = inhabitant.fatherName === null ? "NULL" : `'${inhabitant.fatherName}'`;
     let motherName = inhabitant.motherName === null ? "NULL" : `'${inhabitant.motherName}'`;
-    let isProtected = inhabitant.isProtected === null ? "NULL" : inhabitant.isProtected;
-    let isParalyzed = inhabitant.isParalyzed === null ? "NULL" : inhabitant.isParalyzed;
+    let isProtected = inhabitant.isProtected === null ? "NULL" : `'${inhabitant.isProtected}'`;
+    let isParalyzed = inhabitant.isParalyzed === null ? "NULL" : `'${inhabitant.isParalyzed}'`;
     let phoneticName = inhabitant.phoneticName === null ? "NULL" : `'${inhabitant.phoneticName}'`;
     let latinizedName = inhabitant.latinizedName === null ? "NULL" : `'${inhabitant.latinizedName}'`;
     let latinizedSurname1 = inhabitant.latinizedSurname1 === null ? "NULL" : `'${inhabitant.latinizedSurname1}'`;
@@ -468,19 +474,21 @@ export async function insertShowcaseInhabitant(inhabitant :Inhabitant) {
     let postalCode = inhabitant.postalCode === null ? "NULL" : `'${inhabitant.postalCode}'`;
     let municipality = inhabitant.municipality === null ? "NULL" : `'${inhabitant.municipality}'`;
 
-    await db.performQueryOracleDB(`INSERT INTO PMH_HABITANTE (NOMBRE_COMPLETO, DOC_IDENTIFICADOR, ALTA_MUNI_FECHA, NACIM_FECHA, SEXO_INE, TELEFONO, TELEFONO_MOVIL, FAX, EMAIL, COD_NIVEL_INSTRUCCION, NOMBRE_PADRE, NOMBRE_MADRE, ES_PROTEGIDO, ES_PARALIZADO, NOMBRE_FONETICO, NOMBRE_LATIN, APELLIDO1_LATIN, APELLIDO2_LATIN) VALUES ('${inhabitant.fullName}', '${inhabitant.idDoc}', ${registrationDate}, ${birthDate}, ${gender}, ${landlinePhone}, ${mobilePhone}, ${faxNumber}, ${email}, ${instructionLevel}, ${fatherName}, ${motherName}, ${isProtected}, ${isParalyzed}, ${phoneticName}, ${latinizedName}, ${latinizedSurname1}, ${latinizedSurname2})`);
-    await db.performQueryOracleDB(`INSERT INTO PMH_INSCRIPCION () VALUES ()`);
-    await db.performQueryOracleDB(`INSERT INTO PMH_MOVIMIENTO (TIPO_MOVIMIENTO_ID, FECHA_OCURRENCIA) VALUES (${lastMoveType}, ${lastMoveDate})`);
-    await db.performQueryOracleDB(`INSERT INTO PMH_VIVIENDA (NUCLEO_DISEMINADO_NOMBRE, CODIGO_POSTAL, ADDRESS) VALUES (${municipality}, ${postalCode}, ${address})`);
+    await Promise.all([
+        db.performQueryOracleDB(`INSERT INTO PMH_HABITANTE (NOMBRE_COMPLETO, DOC_IDENTIFICADOR, ALTA_MUNI_FECHA, NACIM_FECHA, SEXO_INE, TELEFONO, TELEFONO_MOVIL, FAX, EMAIL, COD_NIVEL_INSTRUCCION, NOMBRE_PADRE, NOMBRE_MADRE, ES_PROTEGIDO, ES_PARALIZADO, NOMBRE_FONETICO, NOMBRE_LATIN, APELLIDO1_LATIN, APELLIDO2_LATIN) VALUES ('${inhabitant.fullName}', '${inhabitant.idDoc}', ${registrationDate}, ${birthDate}, ${gender}, ${landlinePhone}, ${mobilePhone}, ${faxNumber}, ${email}, ${instructionLevel}, ${fatherName}, ${motherName}, ${isProtected}, ${isParalyzed}, ${phoneticName}, ${latinizedName}, ${latinizedSurname1}, ${latinizedSurname2})`),
+        db.performQueryOracleDB(`INSERT INTO PMH_INSCRIPCION VALUES (NULL)`),
+        db.performQueryOracleDB(`INSERT INTO PMH_MOVIMIENTO (TIPO_MOVIMIENTO_ID, FECHA_OCURRENCIA) VALUES (${lastMoveType}, ${lastMoveDate})`),
+        db.performQueryOracleDB(`INSERT INTO PMH_VIVIENDA (NUCLEO_DISEMINADO_NOMBRE, CODIGO_POSTAL, ADDRESS) VALUES (${municipality}, ${postalCode}, ${address})`)
+    ]);
 
-    let currentDboids = {
-        "habitante": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_HABITANTE"),
-        "inscripcion": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_INSCRIPCION"),
-        "movimiento": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_MOVIMIENTO"),
-        "vivienda": await db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() FROM PMH_VIVIENDA"),
-    };
+    let currentDboids = (await Promise.all([
+        db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() AS DBOID FROM PMH_HABITANTE"),
+        db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() AS DBOID FROM PMH_INSCRIPCION"),
+        db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() AS DBOID FROM PMH_MOVIMIENTO"),
+        db.performQueryOracleDB("SELECT LAST_INSERT_ROWID() AS DBOID FROM PMH_VIVIENDA")
+    ])).map(e => e[0]["DBOID"]);
 
     await db.performQueryOracleDB(`INSERT INTO PMH_SIT_HABITANTE (HABITANTE_ID, INSCRIPCION_ID, MOVIMIENTO_ID, VIVIENDA_ID, ES_ULTIMO, ES_VIGENTE) VALUES
-        (${currentDboids.habitante}, ${currentDboids.inscripcion}, ${currentDboids.movimiento}, ${currentDboids.vivienda}, 'T', ${isRegistered})
+        (${currentDboids[0]}, ${currentDboids[1]}, ${currentDboids[2]}, ${currentDboids[3]}, 'T', ${isRegistered})
     `);
 }

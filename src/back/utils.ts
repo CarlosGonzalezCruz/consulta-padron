@@ -46,8 +46,9 @@ export function* allMonthNames() {
 
 
 /** Representa localmente un objeto fecha, en formato DD de MMMM, YYYY. */
-export function writeDate(date :Date) {
-    return `${date.getDate() + 1} de ${getMonthName(date.getMonth() + 1)}, ${date.getFullYear()}`;
+export function writeDate(date :string) {
+    let dateObject = new Date(date);
+    return `${dateObject.getDate() + 1} de ${getMonthName(dateObject.getMonth() + 1)}, ${dateObject.getFullYear()}`;
 }
 
 

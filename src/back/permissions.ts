@@ -67,7 +67,7 @@ export async function dissolveParentPermissions(role :Role) {
         newPermissions = await getEffectivePermissions(role);
     } else {
         // En caso contrario, comparamos los permisos del rol actual y del rol base base.
-        let currentPermissions = role.entries;
+        let currentPermissions = JSON.parse(role.entries as any);
         let [ currentEffectivePermissions, grandparentPermissions ] = await Promise.all([
             await getEffectivePermissions(role),
             await getEffectivePermissions(grandparentRole)
@@ -98,7 +98,7 @@ export async function getEffectivePermissions(role :Role, pendingKeys? :Set<stri
         pendingKeys = new Set(Array.from(inhabitant.getPermissionEntries()).map(e => e.permissionKey));
     }
 
-    let currentPermissions = role.entries;
+    let currentPermissions = JSON.parse(role.entries as any);
     let ret :EffectiveRolePermissions = {};
 
     // Recorreremos todas las entradas que define el rol. Las que encontremos las sacamos de pendingKeys, pero las que no (o sean null) las conservaremos

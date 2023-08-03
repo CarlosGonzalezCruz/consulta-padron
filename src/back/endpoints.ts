@@ -19,8 +19,9 @@ export async function listen() {
     let httpsPort = properties.get<number>("Application.https-port");
     let httpPort = properties.get<number | null>("Application.http-port", null);
 
-    express().listen(httpsPort, () => { // Esta versión del proyecto no utiliza HTTPS por ser una demostración.
+    APP.listen(httpsPort, () => { // Esta versión del proyecto no utiliza HTTPS por ser una demostración.
         console.log(`(https) Atendiendo al puerto ${httpsPort}...`);
+        console.log(`En la versión de muestra, el puerto https también usa conexión sin cifrar.`);
         if(httpPort != null) {
             setupHttpToHttpsRedirect(httpPort, httpsPort);
         }
@@ -39,7 +40,7 @@ process.on("SIGINT", async () => {
 function setupHttpToHttpsRedirect(httpPort :number, httpsPort :number) {
     let httpApp = express();
     let targetHost = (req :any) => req.headers.host.replace(/(\w*):(\d{1,5})/, `$1:${httpsPort}`); // Aquí simplemente reemplazamos el puerto HTTP por el HTTPS en el host.
-    httpApp.get("*", (req, res) => res.redirect(`https://${targetHost(req)}${req.url}`)); // Redirigimos todas las peticiones al host HTTPS con la dirección introducida.
+    httpApp.get("*", (req, res) => res.redirect(`http://${targetHost(req)}${req.url}`)); // Redirigimos todas las peticiones al host HTTPS con la dirección introducida.
     httpApp.listen(httpPort);
     console.log(`(http) Atendiendo al puerto ${httpPort}...`);
 }

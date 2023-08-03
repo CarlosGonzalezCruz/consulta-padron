@@ -7,12 +7,14 @@ import * as properties from "./properties.js";
 
 const DB_PATHS = {
     oracledb: "db/oracle.db",
-    mysql: "db/mysql.db"
+    mysql: "db/mysql.db",
+    ldap: "db/ldap.db"
 } as const;
 
 let oracledb :sqlite3.Database | null;
 let oracledbCloseTimeout :NodeJS.Timeout | null; // Referencia al objecto timeout para cerrar la conexión. Se puede resetear el timeout.
 let mysqldb :sqlite3.Database;
+let ldapdb :sqlite3.Database; // Esto solo se usa como parte de la versión de muestra.
 
 let mysqldbLastRowCount = 0; // Cantidad de filas alteradas por la última consulta de MySQL.
                             // No siempre queremos actualizar este número, ya que algunas consultas (p.ej un SELECT simple) siempre indicará que se han actualizado 0 filas.
@@ -49,6 +51,12 @@ export async function openOracleDB() {
 }
 
 
+export async function openLDAP() {
+    ensureDirectoryExists(DB_PATHS.ldap);
+    await establishLDAPConnection();
+}
+
+
 /** Cierra inmediatamente la conexión a OracleDB. */
 export async function closeOracleDB() {
     if(!oracledb) {
@@ -69,7 +77,9 @@ export async function closeOracleDB() {
 export async function closeAll() {
     await Promise.all([
         console.log(`La conexión con MySQL se cerrará automáticamente.`),
-        closeOracleDB()
+        mysqldb.close(),
+        closeOracleDB(),
+        ldapdb.close()
     ]);
 }
 
@@ -104,7 +114,7 @@ export async function performQueryMySQL(query :string, updateMetaResults = false
             if (err) {
                 reject(err);
             } else {
-                mysqldb.get(`SELECT SQLITE3_TOTAL_CHANGES() AS changes`, (err, row :any) => {
+                mysqldb.get(`SELECT total_changes() AS changes`, (err, row :any) => {
                     if(updateMetaResults) {
                         if (err) {
                             reject(err);
@@ -137,6 +147,21 @@ export async function performQueryOracleDB(query :string) :Promise<{[k :string] 
         });
     });
 }
+
+
+/** Esta función sólo existe en la versión de muestra. Este módulo no gestiona la conexión a LDAP en el entorno de producción. */
+export async function performQueryLDAP(query :string, updateMetaResults = false) :Promise<any> {
+    return new Promise((resolve, reject) => {
+        ldapdb.all(query, (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
+}
+
 
 
 /** Resetea el timeout de la conexión a OracleDB, si se ha proporcionado uno mediante las propiedades del servidor. */
@@ -175,6 +200,19 @@ async function establishMySQLConnection() {
                 reject(err);
             } else {
                 resolve(mysqldb);
+            }
+        });
+    });
+}
+
+
+async function establishLDAPConnection() {
+    return new Promise((resolve, reject) => {
+        ldapdb = new sqlite3.Database(DB_PATHS.ldap, err => {
+            if(err) {
+                reject(err);
+            } else {
+                resolve(ldapdb);
             }
         });
     });
@@ -241,121 +279,133 @@ async function initTables() {
         }
     }
 
-    openOracleDB();
+    await Promise.all([openOracleDB(), openLDAP()]);
+    await Promise.all([
+        
+        new Promise(resolve =>
+        oracledb!.exec(`
+            CREATE TABLE IF NOT EXISTS PMH_SIT_HABITANTE (
+                DBOID INTEGER PRIMARY KEY,
+                HABITANTE_ID INTEGER,
+                INSCRIPCION_ID INTEGER,
+                MOVIMIENTO_ID INTEGER,
+                VIVIENDA_ID INTEGER,
+                ES_ULTIMO TEXT,
+                ES_VIGENTE TEXT,
+                FOREIGN KEY (HABITANTE_ID) REFERENCES PMH_HABITANTE(DBOID),
+                FOREIGN KEY (INSCRIPCION_ID) REFERENCES PMH_INSCRIPCION(DBOID),
+                FOREIGN KEY (MOVIMIENTO_ID) REFERENCES PMH_MOVIMIENTO(DBOID),
+                FOREIGN KEY (VIVIENDA_ID) REFERENCES PMH_VIVIENDA(DBOID)
+            );
 
-    oracledb!.exec(`
-        CREATE TABLE IF NOT EXISTS PMH_SIT_HABITANTE (
-            ID INTEGER PRIMARY KEY,
-            HABITANTE_ID INTEGER,
-            INSCRIPCION_ID INTEGER,
-            MOVIMIENTO_ID INTEGER,
-            VIVIENDA_ID INTEGER,
-            ES_ULTIMO TEXT,
-            ES_VIGENTE TEXT,
-            FOREIGN KEY (HABITANTE_ID) REFERENCES PMH_HABITANTE(DBOID),
-            FOREIGN KEY (INSCRIPCION_ID) REFERENCES PMH_INSCRIPCION(DBOID),
-            FOREIGN KEY (MOVIMIENTO_ID) REFERENCES PMH_MOVIMIENTO(DBOID),
-            FOREIGN KEY (VIVIENDA_ID) REFERENCES PMH_VIVIENDA(DBOID)
-        );
+            CREATE TABLE IF NOT EXISTS PMH_NIV_INSTRUCCION_T (
+                COD_NIVEL_INSTRUCCION TEXT PRIMARY KEY,
+                DESCRIPCION TEXT,
+                VALIDADO INTEGER
+            );
+            
+            CREATE TABLE IF NOT EXISTS PMH_HABITANTE (
+                DBOID INTEGER PRIMARY KEY,
+                DOC_IDENTIFICADOR TEXT,
+                NOMBRE_COMPLETO TEXT,
+                ALTA_MUNI_FECHA TEXT,
+                NACIM_FECHA TEXT,
+                SEXO_INE INTEGER,
+                TELEFONO TEXT,
+                TELEFONO_MOVIL TEXT,
+                FAX TEXT,
+                EMAIL TEXT,
+                COD_NIVEL_INSTRUCCION TEXT,
+                NOMBRE_PADRE TEXT,
+                NOMBRE_MADRE TEXT,
+                ES_PROTEGIDO TEXT,
+                ES_PARALIZADO TEXT,
+                NOMBRE_FONETICO TEXT,
+                NOMBRE_LATIN TEXT,
+                APELLIDO1_LATIN TEXT,
+                APELLIDO2_LATIN TEXT,
+                FOREIGN KEY (COD_NIVEL_INSTRUCCION) REFERENCES PMH_NIV_INSTRUCCION_T(COD_NIVEL_INSTRUCCION)
+            );
+            
+            CREATE TABLE IF NOT EXISTS PMH_INSCRIPCION (
+                DBOID INTEGER PRIMARY KEY
+            );
+            
+            CREATE TABLE IF NOT EXISTS PMH_MOVIMIENTO (
+                DBOID INTEGER PRIMARY KEY,
+                TIPO_MOVIMIENTO_ID INTEGER,
+                FECHA_OCURRENCIA TEXT,
+                FOREIGN KEY (TIPO_MOVIMIENTO_ID) REFERENCES CNF_MOVIMIENTO_PMH(DBOID)
+            );
+            
+            CREATE TABLE IF NOT EXISTS CNF_MOVIMIENTO_PMH (
+                DBOID INTEGER PRIMARY KEY,
+                DESCRIPCION TEXT
+            );
+            
+            CREATE TABLE IF NOT EXISTS PMH_VIVIENDA (
+                DBOID INTEGER PRIMARY KEY,
+                ADDRESS TEXT,
+                CODIGO_POSTAL TEXT,
+                NUCLEO_DISEMINADO_NOMBRE TEXT
+            );
 
-        CREATE TABLE IF NOT EXISTS PMH_NIV_INSTRUCCION_T (
-            COD_NIVEL_INSTRUCCION TEXT PRIMARY KEY,
-            DESCRIPCION TEXT,
-            VALIDADO INTEGER
-        );
-        
-        CREATE TABLE IF NOT EXISTS PMH_HABITANTE (
-            DBOID INTEGER PRIMARY KEY,
-            DOC_IDENTIFICADOR TEXT,
-            NOMBRE_COMPLETO TEXT,
-            ALTA_MUNI_FECHA TEXT,
-            NACIM_FECHA TEXT,
-            SEXO_INE INTEGER,
-            TELEFONO TEXT,
-            TELEFONO_MOVIL TEXT,
-            FAX TEXT,
-            EMAIL TEXT,
-            COD_NIVEL_INSTRUCCION TEXT,
-            NOMBRE_PADRE TEXT,
-            NOMBRE_MADRE TEXT,
-            ES_PROTEGIDO TEXT,
-            ES_PARALIZADO TEXT,
-            NOMBRE_FONETICO TEXT,
-            NOMBRE_LATIN TEXT,
-            APELLIDO1_LATIN TEXT,
-            APELLIDO2_LATIN TEXT,
-            FOREIGN KEY (COD_NIVEL_INSTRUCCION) REFERENCES PMH_NIV_INSTRUCCION_T(COD_NIVEL_INSTRUCCION)
-        );
-        
-        CREATE TABLE IF NOT EXISTS PMH_INSCRIPCION (
-            DBOID INTEGER PRIMARY KEY
-        );
-        
-        CREATE TABLE IF NOT EXISTS PMH_MOVIMIENTO (
-            DBOID INTEGER PRIMARY KEY,
-            TIPO_MOVIMIENTO_ID INTEGER,
-            FECHA_OCURRENCIA TEXT
-        );
-        
-        CREATE TABLE IF NOT EXISTS CNF_MOVIMIENTO_PMH (
-            DBOID INTEGER PRIMARY KEY,
-            DESCRIPCION TEXT
-        );
-        
-        CREATE TABLE IF NOT EXISTS PMH_VIVIENDA (
-            DBOID INTEGER PRIMARY KEY,
-            ADDRESS TEXT,
-            CODIGO_POSTAL TEXT,
-            NUCLEO_DISEMINADO_NOMBRE TEXT
-        );
+            INSERT OR IGNORE INTO CNF_MOVIMIENTO_PMH (DBOID, DESCRIPCION) VALUES
+                (1, 'Modificación tipo documento'),
+                (2, 'Baja por no confirmación'),
+                (3, 'Baja duplicidad'),
+                (4, 'Baja Cambio Residencia'),
+                (5, 'Modificacion Datos Personales'),
+                (6, 'Alta omision'),
+                (7, 'Alta nacimiento'),
+                (8, 'Cambio Domicilio'),
+                (9, 'Alta cambio residencia'),
+                (10, 'Baja Inscripcion Indebida'),
+                (11, 'Baja defuncion'),
+                (12, 'Renovación Residencia'),
+                (13, 'Creacion padron'),
+                (14, 'Variación territorial'),
+                (15, 'Cambio Inscripción'),
+                (16, 'Cambio Inscripción de Vivienda'),
+                (17, 'Unificación Inscripción'),
+                (18, 'Baja Caducidad (ENCSARP)'),
+                (19, 'Confirmación residencia'),
+                (20, 'Baja de oficio'),
+                (21, 'Baja Inclusion sin INE'),
+                (22, 'Modif.dato domicilio'),
+                (23, 'Corr.datos sin ef.INE'),
+                (24, 'Modificación Seccionado'),
+                (25, 'Modificación de Hoja'),
+                (26, 'Modificación cód. ind.');
 
-        INSERT OR IGNORE INTO CNF_MOVIMIENTO_PMH (DBOID, DESCRIPCION) VALUES
-            (1, 'Modificación tipo documento'),
-            (2, 'Baja por no confirmación'),
-            (3, 'Baja duplicidad'),
-            (4, 'Baja Cambio Residencia'),
-            (5, 'Modificacion Datos Personales'),
-            (6, 'Alta omision'),
-            (7, 'Alta nacimiento'),
-            (8, 'Cambio Domicilio'),
-            (9, 'Alta cambio residencia'),
-            (10, 'Baja Inscripcion Indebida'),
-            (11, 'Baja defuncion'),
-            (12, 'Renovación Residencia'),
-            (13, 'Creacion padron'),
-            (14, 'Variación territorial'),
-            (15, 'Cambio Inscripción'),
-            (16, 'Cambio Inscripción de Vivienda'),
-            (17, 'Unificación Inscripción'),
-            (18, 'Baja Caducidad (ENCSARP)'),
-            (19, 'Confirmación residencia'),
-            (20, 'Baja de oficio'),
-            (21, 'Baja Inclusion sin INE'),
-            (22, 'Modif.dato domicilio'),
-            (23, 'Corr.datos sin ef.INE'),
-            (24, 'Modificación Seccionado'),
-            (25, 'Modificación de Hoja'),
-            (26, 'Modificación cód. ind.');
-
-        INSERT OR IGNORE INTO PMH_NIV_INSTRUCCION_T (COD_NIVEL_INSTRUCCION, DESCRIPCION, VALIDADO) VALUES
-            ('00', '00.- No aplicable menor de 16 años', 1),
-            ('10', '10.- No sabe leer ni escribir', 1),
-            ('11', '11.- No sabe leer ni escribir', 1),
-            ('20', '20.- Titulación inferior a graduado escolar', 1),
-            ('21', '21.- Sin estudios', 1),
-            ('22', '22.- Primaria o EGB incompleta, Cert. Escolaridad', 1),
-            ('30', '30.- Graduado escolar o equivalente', 1),
-            ('31', '31.- Bachiller, Graduado Escolar, EGB, Primaria, ESO.', 1),
-            ('32', '32.- FP 1, FP de Grado Medio. Oficialía Industrial - Ciclo medio', 1),
-            ('40', '40.- Bachiller, FP2, equivalente o superiores, Ciclos superiores', 1),
-            ('41', '41.- Formación Profesional Segundo Grado. Formación profesional de Grado Superior. Maestría industrial', 1),
-            ('42', '42.- Bachiller superior. BUP. Bachiller LOGSE', 1),
-            ('43', '43.- Otras titulaciones medias (Aux. Clínica, Prog. informático, Auxiliar de vuelo, Diplomados Artes)', 1),
-            ('44', '44.- Diplomados Universitarios (Empresariales, Profesorado, ATS, etc.)', 1),
-            ('45', '45.- Arquitecto. Ingeniero Técnico', 1),
-            ('46', '46.- Licenciado Universitario. Arquitecto. Ing. Superior', 1),
-            ('47', '47.- Titulados de Estudios Superiores no universitarios', 1),
-            ('48', '48.- Doctorado y Estudios de postgrados', 1),
-            ('99', '99.- Desconocido', 1);
-    `);
+            INSERT OR IGNORE INTO PMH_NIV_INSTRUCCION_T (COD_NIVEL_INSTRUCCION, DESCRIPCION, VALIDADO) VALUES
+                ('00', '00.- No aplicable menor de 16 años', 1),
+                ('10', '10.- No sabe leer ni escribir', 1),
+                ('11', '11.- No sabe leer ni escribir', 1),
+                ('20', '20.- Titulación inferior a graduado escolar', 1),
+                ('21', '21.- Sin estudios', 1),
+                ('22', '22.- Primaria o EGB incompleta, Cert. Escolaridad', 1),
+                ('30', '30.- Graduado escolar o equivalente', 1),
+                ('31', '31.- Bachiller, Graduado Escolar, EGB, Primaria, ESO.', 1),
+                ('32', '32.- FP 1, FP de Grado Medio. Oficialía Industrial - Ciclo medio', 1),
+                ('40', '40.- Bachiller, FP2, equivalente o superiores, Ciclos superiores', 1),
+                ('41', '41.- Formación Profesional Segundo Grado. Formación profesional de Grado Superior. Maestría industrial', 1),
+                ('42', '42.- Bachiller superior. BUP. Bachiller LOGSE', 1),
+                ('43', '43.- Otras titulaciones medias (Aux. Clínica, Prog. informático, Auxiliar de vuelo, Diplomados Artes)', 1),
+                ('44', '44.- Diplomados Universitarios (Empresariales, Profesorado, ATS, etc.)', 1),
+                ('45', '45.- Arquitecto. Ingeniero Técnico', 1),
+                ('46', '46.- Licenciado Universitario. Arquitecto. Ing. Superior', 1),
+                ('47', '47.- Titulados de Estudios Superiores no universitarios', 1),
+                ('48', '48.- Doctorado y Estudios de postgrados', 1),
+                ('99', '99.- Desconocido', 1);
+        `, resolve)),
+        
+        new Promise(resolve =>
+        ldapdb!.exec(`
+        CREATE TABLE IF NOT EXISTS USERS (
+            USERNAME TEXT PRIMARY KEY,
+            PASSWORD TEXT
+        );
+        `, resolve))
+    ]);
 }

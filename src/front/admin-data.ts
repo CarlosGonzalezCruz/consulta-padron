@@ -442,7 +442,7 @@ async function prepareRolePermissionsModal(caption :string) {
         adminFetch.fetchRole(selectedRole) as Promise<Role>,
     ]);
     selectedRoleInheritedPermissions = roleData.parent != null ? await adminFetch.fetchRoleEffectivePermissions(roleData.parent) as EffectiveRolePermissions : {};
-    let permissions = roleData!.entries;
+    let permissions = JSON.parse(roleData!.entries as any);
     for(let entry of entries!) {
         generateRolePermissionsRow({
             permissionKey: entry.permissionKey,

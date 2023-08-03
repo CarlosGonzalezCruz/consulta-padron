@@ -38,7 +38,7 @@ export function displayMessageBox(message :string, icon :keyof typeof MSG_BOX_IC
 export function displayLoadingBox(message :string) {
     const MODAL_FOOTER = MSG_BOX.find(".modal-footer");
     const SPINNER = MSG_BOX.find("#modal-dialog-loading-spinner");
-    const MIN_LOADING_TIME_MS = 500;
+    const MIN_LOADING_TIME_MS = 650;
     let promiseResolve :() => void = () => {};
     
     let waitFinish = new Promise<void>(r => promiseResolve = r); // Promesa secundaria a la que extraemos la función de resolución.
@@ -64,6 +64,10 @@ export function displayLoadingBox(message :string) {
                 SPINNER.removeClass("d-flex");
                 utils.setMsgBoxDismissable(true);
                 MSG_BOX.modal("hide");
+                /* setTimeout(() => {
+                    if($(".modal:visible").length == 0) {
+                        $(".modal-backdrop").remove()
+                    }}, 500); */ // En caso de que no desaparezca automáticamente.
             }, MIN_LOADING_TIME_MS);
         });
         
