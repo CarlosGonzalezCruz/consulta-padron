@@ -474,6 +474,32 @@ endpoint("/admin/role", "DELETE", async (request, result) => {
     }
 });
 
+endpoint("/showcase/all-ids", "GET", async (request, result) => {
+    try {
+        let query = await db.getAllAvailableIdDocs();
+        result.send({success: true, data: query});
+    } catch(e) {
+        console.error(`No se ha podido obtener los documentos de identidad. Causa: ${e}`);
+        result.send({success: false});
+    }
+});
+
+endpoint("/showcase/credentials", "GET", async (request, result) => {
+    try {
+        let query = await db.getAllLDAPAccounts();
+        if(properties.get("Admin.enabled") || properties.get("Admin.username")) {
+            query.unshift({
+                USERNAME: properties.get("Admin.username"),
+                PASSWORD: properties.get("Admin.password")
+            });
+        }
+        result.send({success: true, data: query});
+    } catch(e) {
+        console.error(`No se ha podido obtener los documentos de identidad. Causa: ${e}`);
+        result.send({success: false});
+    }
+});
+
 /** Esta función activa los endpoints indicados después de que Passport pueda activarse. */
 async function endpoint(uri :string, rest :RequestMethod, callback :(request :any, result :any) => any) {
     await utils.passportReady();

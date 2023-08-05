@@ -1,6 +1,7 @@
 import * as utils from "./utils.js";
 import * as msg from "./message-box.js";
 import * as session from "./session.js";
+import * as showcase from "./display-showcase-data.js";
 
 
 // Este módulo gestiona la operación de inicio de sesión desde el cliente.
@@ -29,6 +30,7 @@ utils.documentReady().then(() => {
 
     msg.preloadMsgBoxIcons();
     utils.addModalButtonKeybinding();
+    showcase.setup();
 });
 
 

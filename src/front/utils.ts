@@ -123,3 +123,8 @@ export function writeBoolean(value :Boolean | DBBinary | null) {
         return (value == true || value == 'T') ? "Sí" : "No";
     }
 }
+
+
+export function ensureNotNull<T>(value :T | null | undefined) : value is T {
+    return value != null;
+}

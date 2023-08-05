@@ -64,7 +64,10 @@ async function generateDocumentContent(idDoc :string, allowedKeys :string[], doc
         prepareRow: (_, column) => column == 0 ? document.font("Helvetica-Bold") : document.font("Helvetica")
     });
 
+    document.moveDown().font("Helvetica").fontSize(8)
+        .text("Este documento se ha generado con propósitos de demostración y no refleja los datos de un habitante real.", {align: "center"});
     document.moveDown().image("web/assets/ayto-logo.png", {fit: [560, 50], align: "center"});
+    
 }
 
 

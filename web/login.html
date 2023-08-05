@@ -13,6 +13,9 @@
         <div class="container adjust-to-screen h-100 d-flex flex-column">
             <div class="d-flex flex-row position-absolute justify-content-end">
                 <h4 id="environment-label" class="font-weight-light"></h4>
+                <p class="mx-1 py-1 align-self-center">· 
+                    <a href="javascript:" id="showcase-get-credentials">Obtener credenciales de muestra</a>
+                </p>
             </div>
             <div class="d-flex flex-column flex-grow-1 justify-content-center">
                 <div class="d-flex flex-row">
@@ -40,12 +43,12 @@
                                 <div class="col-3"></div>
                                 <button id="form-login-submit" type="submit" class="btn btn-primary">Acceder</button>
                                 <div class="d-none d-md-flex col-4 mr-0">
-                                    <small class="d-none login-error">El usuario o la contraseña son incorrectos. Inténtelo de nuevo.</small>
+                                    <small class="d-none login-error">El usuario o la contraseña son incorrectos. Use las credenciales que se ofrecen en la parte superior de la pantalla.</small>
                                 </div>
                             </div>
                             <div class="form-group d-flex d-md-none flex-row">
                                 <div class="col-3"></div>
-                                <small class="d-none login-error">El usuario o la contraseña son incorrectos. Inténtelo de nuevo.</small>
+                                <small class="d-none login-error">El usuario o la contraseña son incorrectos. Use las credenciales que se ofrecen en la parte superior de la pantalla.</small>
                             </div>
                         </form>
                     </div>
@@ -76,6 +79,40 @@
             </div>
             <div id="modal-preloaded-icons" hidden>
                 <!-- Will be filled in runtime -->
+            </div>
+        </div>
+        <div id="modal-showcase-credentials" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Credenciales de muestra</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Se ha creado las siguientes cuentas ficticias para permitir el acceso al aplicativo.</p>
+                        <div class="overflow-y vh-50">
+                            <div id="modal-showcase-credentials-container" class="d-flex flex-wrap justify-content-center">
+                                <div id="modal-showcase-credentials-item-template" class="rounded border d-flex flex-row m-1 p-2">
+                                    <table>
+                                        <tr>
+                                            <td class="text-right pr-2"><b>Usuario</b></td>
+                                            <td>{{USERNAME}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-right pr-2"><b>Contraseña</b></td>
+                                            <td>{{PASSWORD}}</td>
+                                        </tr>
+                                    </table>
+                                    <button class="btn btn-secondary ml-1">
+                                        <img src="icons/box-arrow-in-right.svg", class="img-fluid svg-inverted-color">
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -2,6 +2,7 @@ import * as query from "./query-data.js";
 import * as msg from "./message-box.js";
 import * as session from "./session.js";
 import * as utils from "./utils.js";
+import * as showcase from "./display-showcase-data.js";
 
 // Este módulo es el índice de la pantalla de consulta de habitantes.
 
@@ -18,6 +19,7 @@ utils.documentReady().then(() => {
     checkSession();
     focusSearchBar();
     updateEnvironmentLabel();
+    showcase.setup();
 });
 
 function checkSession() {

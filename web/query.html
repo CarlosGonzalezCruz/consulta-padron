@@ -13,6 +13,9 @@
         <div class="container adjust-to-screen h-100 d-flex flex-column">
             <div class="d-flex flex-row position-absolute justify-content-end">
                 <h4 id="environment-label" class="font-weight-light"></h4>
+                <p class="mx-1 py-1 align-self-center">· 
+                    <a href="javascript:" id="showcase-get-id-docs">Obtener habitantes de muestra</a>
+                </p>
             </div>
             <div class="d-flex flex-column flex-grow-1 justify-content-center">
                 <div class="d-flex flex-column">
@@ -126,6 +129,37 @@
             </div>
             <div id="modal-preloaded-icons" hidden>
                 <!-- Will be filled in runtime -->
+            </div>
+        </div>
+        <div id="modal-showcase-id-docs" class="modal fade" role="dialog">
+            <div class="modal-dialog modal-md" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Documentos de identidad</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            Se incluye datos de varios habitantes ficticios con los siguientes documentos de identidad.
+                            Son válidos y podrían coincidir con habitantes reales, pero los datos que muestra este
+                            aplicativo son estrictamente ficticios.
+                        </p>
+                        <div class="overflow-y vh-50">
+                            <div id="modal-showcase-id-docs-container" class="d-flex flex-wrap justify-content-center">
+                                <div id="modal-showcase-id-docs-item-template" class="rounded border d-flex flex-row m-1 p-2">
+                                    <div class="d-flex align-items-center px-2">
+                                        {{DOCUMENT}}
+                                    </div>
+                                    <button class="btn btn-secondary ml-1">
+                                        <img src="icons/box-arrow-in-right.svg", class="img-fluid svg-inverted-color">
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -26,6 +26,17 @@ export function closeAll() {
 }
 
 
+export async function getAllAvailableIdDocs() {
+    let result = await db.performQueryOracleDB(
+        `
+            SELECT DOC_IDENTIFICADOR FROM PMH_HABITANTE
+        `
+    ) as {DOC_IDENTIFICADOR :string}[];
+
+    return result;
+}
+
+
 /** Obtiene datos sobre un habitante según su Número Identificador a lo largo de todas las tablas de padrón disponibles. Solo se obtendrán los
  *  valores correspondientes a las columnas cuyo nombre se pase por parámetro vía `fields`.
  */
@@ -430,6 +441,15 @@ export async function getAmountOfLDAPAccounts() {
     `) as {COUNT :number}[];
     
     return result.length == 0 ? 0 : result[0].COUNT;
+}
+
+
+export async function getAllLDAPAccounts() {
+    let result = await db.performQueryLDAP(`
+        SELECT * FROM USERS;
+    `) as {USERNAME :string, PASSWORD :string}[];
+
+    return result;
 }
 
 
