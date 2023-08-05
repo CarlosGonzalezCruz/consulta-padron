@@ -59,7 +59,13 @@
         width: 200px;
         min-width: 200px;
     }
+
+
+    .modal-dialog.wide-md {
+        max-width: 1000px !important;
+    }
 }
+
 
 @media (min-width: 992px) {
     .fixed-w-lg-300 {

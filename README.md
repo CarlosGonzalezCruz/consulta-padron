@@ -1,5 +1,7 @@
 # Consulta de Padrón
 
+> Esta rama contiene una versión modificada del programa que, en lugar de conectarse las bases de datos del ayuntamiento, las simula utilizando datos generados aleatoriamente. De esta manera, se puede descargar, ejecutar y probar libremente la aplicación en cualquier dispositivo compatible. El perfil que se recomienda usar está en `properties/demo.ini`.
+
 Este programa facilita la consulta de los datos padronales de los habitantes de Alcalá de Henares. El usuario debe ingresar con su cuenta del Directorio Activo del ayuntamiento y, después, se puede introducir un DNI, NIE o Pasaporte para consultar información. Según el rol asignado al usuario, se podrá consultar unos datos u otros. Algunos usuarios pueden tener rol de administrador, con lo que podrán cambiar los permisos que otros roles tienen para consultar información.
 
 Para utilizarse, esta aplicación requiere un servidor donde ha de estar en continuo funcionamiento. Se recomienda configurar un servicio que se inicie automáticamente al arranque. Los usuarios se conectarán a través de un navegador web al puerto expuesto por la aplicación.

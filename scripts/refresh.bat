@@ -9,9 +9,6 @@ IF %IS_ROOT%==NO (
     EXIT
 )
 
-echo Descargando el conector de Oracle DB...
-CALL git submodule update --init --recursive
-
 echo Reinstalando las dependencias...
 CALL npm install
 

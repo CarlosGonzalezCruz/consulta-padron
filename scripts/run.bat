@@ -9,9 +9,9 @@ if %IS_ROOT%==NO (
     EXIT
 )
 
-CALL node .\out\back\main.js --profile properties/pro.ini
+CALL node .\out\back\main.js --profile properties/demo.ini
 
 if %ERRORLEVEL% NEQ 0 (
-    echo Asegurese de que existe el archivo 'properties/pro.ini' y tiene los datos correctos.
+    echo Asegurese de que existe el archivo 'properties/demo.ini' y tiene los datos correctos.
     echo Pruebe a ejecutar el script 'refresh.bat' e intente abrir el programa de nuevo.
 )

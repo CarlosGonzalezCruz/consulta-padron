@@ -72,13 +72,11 @@ async function generateRoles() {
         return;
     }
     console.log(`Se van a generar ${ROLE_NAMES.length} roles.`);
+    if(existingRoles.length == 0) {
+        await db.createRole("Predeterminado", {"is_registered": true});
+    }
 
     for(let i = ROLE_NAMES.length - desiredRoles; i < ROLE_NAMES.length; i++) {
-        if(typeof process.stdout.cursorTo == "function") {
-            process.stdout.write(`Generando roles... ${(i+1).toString().padStart(3, ' ')}/${ROLE_NAMES}`);
-            process.stdout.cursorTo(0);
-        }
-
         let name = pickRandom(ROLE_NAMES.filter(n => !existingRoles.map(r => r.name).contains(n)));
         let permissions :RolePermissions = {"is_registered": true};
         if(Math.random() < 0.7) {

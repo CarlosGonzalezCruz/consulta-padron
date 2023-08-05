@@ -53,7 +53,7 @@ const INSTRUCTION_LEVELS = ['00', '10', '11', '20', '21', '22', '30', '31', '32'
 const MOV_SIGN_ON = [1, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 19, 23, 24, 25, 26] as const;
 const MOV_SIGN_OFF = [2, 3, 4, 10, 11, 18, 20, 21, 22] as const;
 
-const WANTED_INHABITANTS = 20;
+const WANTED_INHABITANTS = 250;
 
 
 export async function generateShowcaseInhabitants() {
@@ -62,6 +62,7 @@ export async function generateShowcaseInhabitants() {
         return;
     }
     console.log(`Se van a generar datos de ${WANTED_INHABITANTS} habitantes ficticios.`);
+    let inhabitants :Inhabitant[] = [];
 
     for(let i = WANTED_INHABITANTS - desiredInhabitants; i < WANTED_INHABITANTS; i++) {
         if(typeof process.stdout.cursorTo == "function") {
@@ -102,9 +103,10 @@ export async function generateShowcaseInhabitants() {
             municipality: "ALCALÁ DE HENARES"
         };
 
-        await db.insertShowcaseInhabitant(inhabitant);
+        inhabitants.push(inhabitant);
     }
 
+    await db.insertShowcaseInhabitants(inhabitants);
     console.log(`Datos de habitantes ficticios generados.`);
 }
 
